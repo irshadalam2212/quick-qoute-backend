@@ -24,6 +24,10 @@ const itemSchema = new Schema(
     taxRate: {
       type: Number,
     },
+    description: {
+      type: String,
+      required: true
+    },
     notes: {
       type: String,
     },
@@ -39,4 +43,4 @@ const itemSchema = new Schema(
   { timestamps: true },
 );
 
-export const Item = mmongoose.model("User", itemSchema);
+export const Item = mongoose.model("Item", itemSchema);

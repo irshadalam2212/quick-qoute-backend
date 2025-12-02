@@ -37,4 +37,14 @@ const createItems = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, createdItem, "Item created successfully"));
 });
 
-export { createItems };
+const getAllItems = asyncHandler(async (req, res) => {
+  const items = await Item.find({})
+  if (!items) {
+    throw new ApiError(404, "No items found.")
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, items, "Items fetched successfully"));
+})
+
+export { createItems, getAllItems };
