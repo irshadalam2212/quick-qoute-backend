@@ -10,9 +10,21 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 //cors configurations
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",")
+  : ["http://localhost:4000"];
+
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN?.split(",") || "http://localhost:4000",
+    origin(origin, callback) {
+      // Allow REST tools / same-origin calls without Origin header
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Authorization", "Content-Type"],
@@ -23,7 +35,7 @@ app.use(
 import healthCheckRouter from "./routes/healthcheck.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import itemRouter from "./routes/item.routes.js";
-import quotationRouter from "./routes/quotation.routes.js"
+import quotationRouter from "./routes/quotation.routes.js";
 
 app.use("/api/v1/healthcheck", healthCheckRouter);
 app.use("/api/v1/auth", authRouter);
