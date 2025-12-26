@@ -79,7 +79,7 @@ const getQuotationById = asyncHandler(async (req, res) => {
     const { quotationId } = req.params
 
     if (!quotationId) {
-        throw new ApiError(404, `Quotation with ${quotationId} id is not found.`)
+        throw new ApiError(404, `Quotation with ${quotationId} id is not found!`)
     }
 
     const quotation = await Quotation.findById(quotationId)
@@ -91,7 +91,7 @@ const getQuotationById = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(new ApiResponse(200, quotation, "Quotation fetched successfully"))
+        .json(new ApiResponse(200, quotation, "Quotation fetched successfully!"))
 })
 
 const updateQuotation = asyncHandler(async (req, res) => {

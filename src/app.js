@@ -36,10 +36,12 @@ import healthCheckRouter from "./routes/healthcheck.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import itemRouter from "./routes/item.routes.js";
 import quotationRouter from "./routes/quotation.routes.js";
+import invoiceRouter from "./routes/invoice.routes.js"
 
 app.use("/api/v1/healthcheck", healthCheckRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/items", itemRouter);
 app.use("/api/v1/quotations", quotationRouter);
+app.use("/api/v1/invoices", invoiceRouter);
 
 export default app;
