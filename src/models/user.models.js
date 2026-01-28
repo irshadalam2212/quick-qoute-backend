@@ -37,11 +37,9 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", async function () {
-  // ← Remove `next` param
-  if (!this.isModified("password")) return; // ← Return early, no next()
+  if (!this.isModified("password")) return;
 
   this.password = await bcrypt.hash(this.password, 10);
-  // No next() call needed - async function returns Promise automatically
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {

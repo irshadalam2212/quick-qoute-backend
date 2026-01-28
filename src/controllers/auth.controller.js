@@ -182,6 +182,4 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-// const getCurrentUser = asyncHandler(async (req, res) => {});
-
 export { registerUser, login, logout, getCurrentUser, refreshAccessToken };
