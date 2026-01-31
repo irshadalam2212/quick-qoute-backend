@@ -32,7 +32,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 //import the routes
 import healthCheckRouter from "./routes/healthcheck.routes.js";
