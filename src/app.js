@@ -11,25 +11,28 @@ app.use(cookieParser());
 
 //cors configurations
 const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",")
-  : ["http://localhost:4000"];
+  ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
+  : ["http://localhost:4000", "http://localhost:4000/"];
 
-app.use(
-  cors({
-    origin(origin, callback) {
-      // Allow REST tools / same-origin calls without Origin header
-      if (!origin) return callback(null, true);
+const corsOptions = {
+  origin(origin, callback) {
+    console.log("Origin:", origin);
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Authorization", "Content-Type"],
-  }),
-);
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Authorization", "Content-Type"],
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 //import the routes
 import healthCheckRouter from "./routes/healthcheck.routes.js";
