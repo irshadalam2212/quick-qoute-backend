@@ -10,28 +10,20 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 //cors configurations
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
-  : ["http://localhost:4000/","https://quickqoute.netlify.app/"];
+// const allowedOrigins = process.env.CORS_ORIGIN
+//   ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
+//   : ["http://localhost:4000", "https://quickqoute.netlify.app"];
 
-const corsOptions = {
-  origin(origin, callback) {
-    console.log("Origin:", origin);
-
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    return callback(new Error(`CORS blocked: ${origin}`));
-  },
-  credentials: false,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Authorization", "Content-Type"],
-};
-
-app.use(cors(corsOptions));
+app.use(
+  cors({
+    origin: [
+      "http://localhost:4000",
+      "https://quickqoute.netlify.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 //import the routes
 import healthCheckRouter from "./routes/healthcheck.routes.js";
