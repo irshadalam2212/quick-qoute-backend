@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { Counter } from "./counter.models.js"
 
 const invoiceItemSchema = new Schema({
     description: {
@@ -33,16 +34,14 @@ const invoiceItemSchema = new Schema({
 
 const invoiceSchema = new Schema({
     invoiceNo: {
-        type: String,
-        required: true,
+        type: Number,
         unique: true,
-        index: true,
-        trim: true
+        index: true
     },
-    invoiceDate: {
-        type: Date,
-        default: Date.now
-    },
+    // invoiceDate: {
+    //     type: Date,
+    //     default: Date.now
+    // },
     clientName: {
         type: String,
         trim: true,
@@ -99,5 +98,19 @@ const invoiceSchema = new Schema({
         required: true
     }
 }, { timestamps: true });
+
+
+invoiceSchema.pre("save", async function () {
+    if (!this.isNew) return;
+
+    const counter = await Counter.findOneAndUpdate(
+        { name: "invoice" },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+    );
+
+    this.invoiceNo = counter.seq;
+});
+
 
 export const Invoice = mongoose.model('Invoice', invoiceSchema);
