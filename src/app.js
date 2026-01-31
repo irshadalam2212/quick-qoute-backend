@@ -12,7 +12,7 @@ app.use(cookieParser());
 //cors configurations
 const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(",").map(o => o.trim())
-  : ["http://localhost:4000","https://quickqoute.netlify.app"];
+  : ["http://localhost:4000/","https://quickqoute.netlify.app/"];
 
 const corsOptions = {
   origin(origin, callback) {
