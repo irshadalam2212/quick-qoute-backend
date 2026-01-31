@@ -2,13 +2,13 @@ import mongoose, { Schema } from "mongoose";
 
 const itemSchema = new Schema(
   {
-    keyword: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
-      lowercase: true,
-    },
+    // keyword: {
+    //   type: String,
+    //   required: true,
+    //   trim: true,
+    //   index: true,
+    //   lowercase: true,
+    // },
     category: {
       type: String,
       required: true,

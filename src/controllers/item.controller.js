@@ -4,15 +4,14 @@ import { Item } from "../models/item.models.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 
 const createItems = asyncHandler(async (req, res) => {
-  const { keyword, description, category, unit, baseRate, taxRate, notes } =
+  const { description, category, unit, baseRate, taxRate, notes } =
     req.body;
 
-  if (!description || !keyword || !category) {
-    throw new ApiError(400, "Description, Keyword and category is required!");
+  if (!description || !category) {
+    throw new ApiError(400, "Description and category is required!");
   }
 
   const item = await Item.create({
-    keyword,
     description,
     category,
     unit,
