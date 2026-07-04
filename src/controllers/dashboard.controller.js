@@ -1,148 +1,175 @@
-import { Invoice } from "../models/invoice.models.js";
-import { Quotation } from "../models/quotation.models.js";
+import prisma from "../lib/prisma.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 
-
 export const getDashboardMetrics = asyncHandler(async (req, res) => {
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1);
 
   // Total counts
-  const [totalQuotations, totalInvoices] = await Promise.all([
-    Quotation.countDocuments(),
-    Invoice.countDocuments()
-  ]);
+  const [
+    totalQuotations,
+    totalInvoices,
+    quotations30d,
+    invoices30d,
+    pendingQuotations,
+    unpaidInvoicesCount,
+    unpaidInvoicesAmount,
+  ] = await Promise.all([
+    prisma.quotation.count(),
 
-  // 30-day counts
-  const [quotations30d, invoices30d] = await Promise.all([
-    Quotation.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
-    Invoice.countDocuments({ createdAt: { $gte: thirtyDaysAgo } })
-  ]);
+    prisma.invoice.count(),
 
-  // Pending / unpaid
-  const [pendingQuotations, unpaidInvoices] = await Promise.all([
-    Quotation.countDocuments({
-      status: { $in: ['draft', 'submitted'] }
+    prisma.quotation.count({
+      where: {
+        createdAt: {
+          gte: thirtyDaysAgo,
+        },
+      },
     }),
-    Invoice.aggregate([
-      { $match: { paymentStatus: 'unpaid' } },
-      {
-        $group: {
-          _id: null,
-          count: { $sum: 1 },
-          amount: { $sum: '$grandTotal' }
-        }
-      }
-    ])
+
+    prisma.invoice.count({
+      where: {
+        createdAt: {
+          gte: thirtyDaysAgo,
+        },
+      },
+    }),
+
+    prisma.quotation.count({
+      where: {
+        status: {
+          in: ["DRAFT", "SUBMITTED"],
+        },
+      },
+    }),
+
+    prisma.invoice.count({
+      where: {
+        paymentStatus: "UNPAID",
+      },
+    }),
+
+    prisma.invoice.aggregate({
+      where: {
+        paymentStatus: "UNPAID",
+      },
+      _sum: {
+        grandTotal: true,
+      },
+    }),
   ]);
 
-  const unpaidInvoicesCount = unpaidInvoices[0]?.count || 0;
-  const unpaidInvoicesAmount = unpaidInvoices[0]?.amount || 0;
+  // Fetch last six months' records
+  const [quotations, invoices] = await Promise.all([
+    prisma.quotation.findMany({
+      where: {
+        createdAt: {
+          gte: sixMonthsAgo,
+        },
+      },
+      select: {
+        createdAt: true,
+      },
+    }),
 
-  // Monthly data (last 6 months)
-  const sixMonthsAgo = new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000);
-  const monthlyStats = await Promise.all([
-    Quotation.aggregate([
-      {
-        $match: { createdAt: { $gte: sixMonthsAgo } }
+    prisma.invoice.findMany({
+      where: {
+        createdAt: {
+          gte: sixMonthsAgo,
+        },
       },
-      {
-        $group: {
-          _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" }
-          },
-          count: { $sum: 1 }
-        }
+      select: {
+        createdAt: true,
+        grandTotal: true,
       },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }
-    ]),
-    Invoice.aggregate([
-      {
-        $match: { createdAt: { $gte: sixMonthsAgo } }
-      },
-      {
-        $group: {
-          _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" }
-          },
-          revenue: { $sum: "$grandTotal" },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }
-    ])
+    }),
   ]);
 
-  const [monthlyQuotations, monthlyInvoices] = await Promise.all([
-    Quotation.aggregate([
-      { $match: { createdAt: { $gte: sixMonthsAgo } } },
-      {
-        $group: {
-          _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }
-    ]),
-    Invoice.aggregate([
-      { $match: { createdAt: { $gte: sixMonthsAgo } } },
-      {
-        $group: {
-          _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { "_id.year": 1, "_id.month": 1 } }
-    ])
-  ]);
+  // Initialize last 6 months
+  const monthlyMap = new Map();
 
-  // Fill missing months
-  const months = Array.from({ length: 6 }, (_, i) => {
+  for (let i = 5; i >= 0; i--) {
     const date = new Date();
     date.setMonth(date.getMonth() - i);
-    return { year: date.getFullYear(), month: date.getMonth() + 1 };
+
+    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+
+    monthlyMap.set(key, {
+      month: date.toLocaleString("default", {
+        month: "short",
+      }),
+      quotations: 0,
+      invoices: 0,
+      revenue: 0,
+    });
+  }
+
+  // Count quotations
+  quotations.forEach((quotation) => {
+    const date = new Date(quotation.createdAt);
+
+    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+
+    if (monthlyMap.has(key)) {
+      monthlyMap.get(key).quotations++;
+    }
   });
 
-  const monthlyData = months.map(month => {
-    const q = monthlyQuotations.find(m => m._id.year === month.year && m._id.month === month.month);
-    const i = monthlyInvoices.find(m => m._id.year === month.year && m._id.month === month.month);
+  // Count invoices & revenue
+  invoices.forEach((invoice) => {
+    const date = new Date(invoice.createdAt);
 
-    return {
-      month: `${month.month.toString().padStart(2, '0')}`,
-      quotations: q?.count || 0,
-      invoices: i?.count || 0,
-    };
+    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+
+    if (monthlyMap.has(key)) {
+      monthlyMap.get(key).invoices++;
+      monthlyMap.get(key).revenue += invoice.grandTotal;
+    }
   });
+
+  const monthlyData = [...monthlyMap.values()];
 
   const metrics = {
     totalQuotations,
     totalQuotations30d: quotations30d,
-    quotationsChange: Math.round(((quotations30d / totalQuotations) * 100) || 0),
+    quotationsChange:
+      totalQuotations === 0
+        ? 0
+        : Math.round((quotations30d / totalQuotations) * 100),
 
     totalInvoices,
     totalInvoices30d: invoices30d,
-    invoicesChange: Math.round(((invoices30d / totalInvoices) * 100) || 0),
+    invoicesChange:
+      totalInvoices === 0
+        ? 0
+        : Math.round((invoices30d / totalInvoices) * 100),
 
     pendingQuotations,
+
     unpaidInvoicesCount,
-    unpaidInvoicesAmount,
 
-    monthlyRevenue: monthlyStats[1].map(s => s.revenue || 0),
-    monthlyQuotations: monthlyStats[0].map(s => s.count || 0),
-    monthlyInvoices: monthlyStats[1].map(s => s.count || 0),
+    unpaidInvoicesAmount:
+      unpaidInvoicesAmount._sum.grandTotal ?? 0,
 
-    monthlyData
+    monthlyRevenue: monthlyData.map((m) => m.revenue),
+
+    monthlyQuotations: monthlyData.map((m) => m.quotations),
+
+    monthlyInvoices: monthlyData.map((m) => m.invoices),
+
+    monthlyData,
   };
 
   return res.status(200).json(
-    new ApiResponse(200, metrics, "Dashboard metrics fetched successfully!")
+    new ApiResponse(
+      200,
+      metrics,
+      "Dashboard metrics fetched successfully!"
+    )
   );
 });

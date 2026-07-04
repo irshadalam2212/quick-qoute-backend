@@ -1,20 +1,24 @@
 import dotenv from "dotenv";
-import app from "./app.js";
-import connectDB from "./config/db.js";
+dotenv.config();
 
-dotenv.config({
-  path: "./.env",
+import app from "./app.js";
+import prisma from "./lib/prisma.js";
+
+const PORT = process.env.PORT || 4321;
+
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
 
-const port = process.env.PORT || 4321;
+const shutdown = async () => {
+  console.log("Shutting down...");
 
-connectDB()
-  .then(() => {
-    app.listen(port, () => {
-      console.log(`App is listening on port http://localhost:${port}`);
-    });
-  })
-  .catch((err) => {
-    console.error("MongoDB connection error", err);
-    process.exit(1);
+  await prisma.$disconnect();
+
+  server.close(() => {
+    process.exit(0);
   });
+};
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

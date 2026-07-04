@@ -10,10 +10,6 @@ const userRegisterValidator = () => {
       .withMessage("Email is not valid"),
     body("password").trim().notEmpty().withMessage("Password is required"),
     body("name").optional().trim(),
-    body("employeeId")
-      .trim()
-      .isLength({ min: 4 })
-      .withMessage("Employee Id must be 4 digit long."),
   ];
 };
 

@@ -1,17 +1,32 @@
-import { User } from "../models/user.models.js";
+import prisma from "../lib/prisma.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { ApiResponse } from "../utils/apiresponse.js";
 import { ApiError } from "../utils/apierror.js";
 import { asyncHandler } from "../utils/asynchandler.js";
-import jwt from "jsonwebtoken";
+import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
-    const user = await User.findById(userId);
-    const accessToken = user.generateAccessToken();
-    const refreshToken = user.generateRefreshToken();
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
 
-    user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSave: false });
+    if (!user) {
+      throw new ApiError(404, "User not found");
+    }
+
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user.id);
+
+    await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        refreshToken,
+      },
+    });
 
     return { accessToken, refreshToken };
   } catch (error) {
@@ -23,69 +38,77 @@ const generateAccessAndRefreshToken = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { email, name, password, employeeId } = req.body;
+  const { email, name, password } = req.body;
 
-  const existingUser = await User.findOne({
-    $or: [{ email }, { employeeId }],
+  const existingUser = await prisma.user.findUnique({
+    where: {
+      email,
+    },
   });
 
   if (existingUser) {
-    throw new ApiError(
-      409,
-      "User with email or employee id is already exist",
-      [],
-    );
+    throw new ApiError(409, "User already exists");
   }
 
-  const user = await User.create({
-    email,
-    name,
-    password,
-    employeeId,
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: hashedPassword,
+    },
+    omit: {
+      password: true,
+      refreshToken: true,
+    },
   });
-
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken",
-  );
-
-  if (!createdUser) {
-    throw new ApiError(500, "Something went wrong while registering user", []);
-  }
 
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered successfully"));
+    .json(new ApiResponse(201, user, "User registered successfully"));
 });
 
 const login = asyncHandler(async (req, res) => {
-  const { email, password, employeeId } = req.body;
-  if (!email && !employeeId) {
-    throw new ApiError(400, "Email and employee Id is required");
-  }
+  const { email, password } = req.body;
 
-  const user = await User.findOne({ email });
+  // Find user by email
+  const user = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
 
   if (!user) {
-    throw new ApiError(400, "User doesn't exist");
+    throw new ApiError(404, "User doesn't exist");
   }
 
-  const isPasswordCorrect = await user.isPasswordCorrect(password);
+  // Compare password
+  const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
   if (!isPasswordCorrect) {
-    throw new ApiError(400, "Invalid credentials");
+    throw new ApiError(401, "Invalid credentials");
   }
 
+  // Generate tokens
   const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
-    user._id,
+    user.id,
   );
 
-  const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken",
-  );
+  // Get user without sensitive fields
+  const loggedInUser = await prisma.user.findUnique({
+    where: {
+      id: user.id,
+    },
+    omit: {
+      password: true,
+      refreshToken: true,
+    },
+  });
 
   const options = {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
   };
 
   return res
@@ -106,25 +129,24 @@ const login = asyncHandler(async (req, res) => {
 });
 
 const logout = asyncHandler(async (req, res) => {
-  await User.findByIdAndUpdate(
-    req.user._id,
-    {
-      $set: {
-        refreshToken: "",
-      },
+  await prisma.user.update({
+    where: {
+      id: req.user.id,
     },
-    {
-      new: true,
+    data: {
+      refreshToken: null,
     },
-  );
+  });
+
   const options = {
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === "production",
   };
+
   return res
     .status(200)
-    .clearCookie("accessToken")
-    .clearCookie("refreshToken")
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
     .json(new ApiResponse(200, {}, "User logged out"));
 });
 
@@ -141,41 +163,48 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorized access");
   }
+
   try {
     const decodedToken = jwt.verify(
       incomingRefreshToken,
-      process.env.REFRESH_TOKEN_SECRET,
+      process.env.REFRESH_TOKEN_SECRET
     );
 
-    const user = await User.findById(decodedToken?._id);
+    const user = await prisma.user.findUnique({
+      where: {
+        id: decodedToken.id,
+      },
+    });
 
     if (!user) {
       throw new ApiError(401, "Invalid refresh token");
     }
 
-    if (incomingRefreshToken !== user?.refreshToken) {
+    if (incomingRefreshToken !== user.refreshToken) {
       throw new ApiError(401, "Refresh token is expired");
     }
 
+    const { accessToken, refreshToken: newRefreshToken } =
+      await generateAccessAndRefreshToken(user.id);
+
     const options = {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
     };
-
-    const { accessToken, refreshToken: newRefreshToken } =
-      await generateAccessAndRefreshToken(user._id);
-
-    user.refreshToken = newRefreshToken;
-    await user.save();
 
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", newRefreshToken, options)
       .json(
-        200,
-        { accessToken, refreshToken: newRefreshToken },
-        "Accesss token refreshed",
+        new ApiResponse(
+          200,
+          {
+            accessToken,
+            refreshToken: newRefreshToken,
+          },
+          "Access token refreshed"
+        )
       );
   } catch (error) {
     throw new ApiError(401, "Invalid refresh token");

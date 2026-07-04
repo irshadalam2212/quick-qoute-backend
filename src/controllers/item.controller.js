@@ -1,114 +1,173 @@
 import { ApiError } from "../utils/apierror.js";
 import { asyncHandler } from "../utils/asynchandler.js";
-import { Item } from "../models/item.models.js";
+import prisma from "../lib/prisma.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 
 const createItems = asyncHandler(async (req, res) => {
-  const { description, category, unit, baseRate, taxRate, notes } =
-    req.body;
-
-  if (!description || !category) {
-    throw new ApiError(400, "Description and category is required!");
-  }
-
-  const item = await Item.create({
+  const {
     description,
     category,
     unit,
     baseRate,
     taxRate,
     notes,
-    isActive: true,
-    createdBy: req.user._id,
+  } = req.body;
+
+  const item = await prisma.item.create({
+    data: {
+      description,
+      category,
+      unit,
+      baseRate,
+      taxRate: taxRate || 0,
+      notes,
+      isActive: true,
+
+      createdBy: {
+        connect: {
+          id: req.user.id,
+        },
+      },
+    },
+
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
   });
-
-  const createdItem = await Item.findById(item._id).populate(
-    "createdBy",
-    "name email",
-  );
-
-  if (!createdItem) {
-    throw new ApiError(500, "Something went wrong while creating item");
-  }
 
   return res
     .status(201)
-    .json(new ApiResponse(200, createdItem, "Item created successfully"));
+    .json(new ApiResponse(201, item, "Item created successfully"));
 });
 
 const getAllItems = asyncHandler(async (req, res) => {
-  const items = await Item.find({})
-  if (!items) {
-    throw new ApiError(404, "No items found.")
-  }
+  const items = await prisma.item.findMany({
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
   return res
     .status(200)
     .json(new ApiResponse(200, items, "Items fetched successfully"));
-})
+});
 
 const getItemById = asyncHandler(async (req, res) => {
+  const { itemId } = req.params;
 
-  const { itemId } = req.params
-
-  if (!itemId) {
-    throw new ApiError(404, "Item not found")
-  }
-
-  const item = await Item.findOne({ _id: itemId })
+  const item = await prisma.item.findUnique({
+    where: {
+      id: Number(itemId),
+    },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
 
   if (!item) {
-    throw new ApiError(404, "Item not found")
+    throw new ApiError(404, "Item not found");
   }
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(200, item, "Item fetched successfully"))
-})
+    .json(new ApiResponse(200, item, "Item fetched successfully"));
+});
 
 const updateItem = asyncHandler(async (req, res) => {
+  const { itemId } = req.params;
 
-  const updates = req.body;
+  const {
+    description,
+    category,
+    unit,
+    baseRate,
+    taxRate,
+    notes,
+    isActive,
+  } = req.body;
 
-  const { itemId } = req.params
+  const existingItem = await prisma.item.findUnique({
+    where: {
+      id: Number(itemId),
+    },
+  });
 
-  if (!itemId) {
-    throw new ApiError(404, `Item with ${itemId} id not found`)
+  if (!existingItem) {
+    throw new ApiError(404, "Item not found");
   }
 
-  const updatedItem = await Item.findByIdAndUpdate(itemId,
-    { ...updates, updatedAt: new Date() },
-    { new: true, runValidators: true }
-  )
-
-  if (!updatedItem) {
-    throw new ApiError(404, "Item not found")
-  }
+  const updatedItem = await prisma.item.update({
+    where: {
+      id: Number(itemId),
+    },
+    data: {
+      description,
+      category,
+      unit,
+      baseRate,
+      taxRate,
+      notes,
+      isActive,
+    },
+    include: {
+      createdBy: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(200, updateItem, "Item updated successfully"))
-})
+    .json(new ApiResponse(200, updatedItem, "Item updated successfully"));
+});
 
 const deleteItem = asyncHandler(async (req, res) => {
-  const { itemId } = req.params
+  const { itemId } = req.params;
 
-  if (!itemId) {
-    throw new ApiError(404, "No item found.")
+  const existingItem = await prisma.item.findUnique({
+    where: {
+      id: Number(itemId),
+    },
+  });
+
+  if (!existingItem) {
+    throw new ApiError(404, "Item not found");
   }
 
-  const deletedItem = await Item.findByIdAndDelete(itemId)
+  await prisma.item.delete({
+    where: {
+      id: Number(itemId),
+    },
+  });
 
-  if (!deletedItem) {
-    throw new ApiError(404, "No item found")
-  }
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, itemId, "Item deleted successfully.")
-    )
-})
+  return res.status(200).json(
+    new ApiResponse(200, {}, "Item deleted successfully")
+  );
+});
 
 export { createItems, getAllItems, getItemById, updateItem, deleteItem };
