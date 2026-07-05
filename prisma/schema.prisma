@@ -80,7 +80,7 @@ model Item {
   id Int @id @default(autoincrement())
 
   category    String
-  description String
+  description String @db.Text
   unit        Int?
 
   baseRate Float
