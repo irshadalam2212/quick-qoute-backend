@@ -8,16 +8,23 @@ datasource db {
 }
 
 model User {
-  id           Int     @id @default(autoincrement())
-  name         String
-  email        String  @unique
-  password     String
-  role         String  @default("USER")
+  id Int @id @default(autoincrement())
+
+  name     String
+  email    String @unique
+  password String
+
+  role String @default("USER")
+
   refreshToken String?
 
   quotations Quotation[]
-  items      Item[]
-  invoices   Invoice[]
+
+  invoices Invoice[]
+
+  items Item[] @relation("UserItems")
+
+  categories Category[] @relation("UserCategories")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -56,9 +63,9 @@ model QuotationItem {
   id Int @id @default(autoincrement())
 
   description String
-  
-  unitId      Int
-  unit        Unit @relation(fields: [unitId], references: [id])
+
+  unitId Int
+  unit   Unit @relation(fields: [unitId], references: [id])
 
   quantity Int
   price    Float
@@ -85,18 +92,18 @@ model Item {
   description String @db.Text
 
   unitId Int
-  unit Unit @relation(fields: [unitId], references: [id])
+  unit   Unit @relation(fields: [unitId], references: [id])
 
   baseRate Float
-  
-  taxRate  Float? @default(0)
+
+  taxRate Float? @default(0)
 
   notes String?
 
   isActive Boolean @default(true)
 
   createdById Int?
-  createdBy   User? @relation(fields: [createdById], references: [id])
+  createdBy   User? @relation("UserItems", fields: [createdById], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -132,7 +139,9 @@ model InvoiceItem {
   id Int @id @default(autoincrement())
 
   description String
-  unit        Float?
+
+  unitId Int
+  unit   Unit @relation(fields: [unitId], references: [id])
 
   quantity Int
   price    Float
@@ -150,33 +159,38 @@ enum PaymentStatus {
 }
 
 model Unit {
-  id          Int       @id @default(autoincrement())
-  name        String
-  shortName   String    @unique
-  category    String
-  isActive    Boolean   @default(true)
+  id        Int     @id @default(autoincrement())
+  name      String
+  shortName String  @unique
+  category  String
+  isActive  Boolean @default(true)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   quotationItems QuotationItem[]
+  items          Item[]
+  invoiceItems   InvoiceItem[]
 }
 
 model Category {
-  id          Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  name        String   @unique
-  code        String   @unique
+  name String @unique
 
-  description String?  @db.Text
+  code String @unique
 
-  isActive    Boolean  @default(true)
+  description String? @db.Text
+
+  isActive Boolean @default(true)
 
   createdById Int?
-  createdBy   User?    @relation(fields: [createdById], references: [id])
 
-  scopeOfWorks ScopeOfWork[]
+  createdBy User? @relation("UserCategories", fields: [createdById], references: [id])
+
+  items Item[]
 
   createdAt DateTime @default(now())
+
   updatedAt DateTime @updatedAt
 }

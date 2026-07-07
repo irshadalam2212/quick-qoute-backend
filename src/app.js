@@ -10,7 +10,7 @@ import invoiceRouter from "./routes/invoice.routes.js";
 import dashboardRouter from "./routes/dashboard.routes.js";
 import unitRouter from "./routes/unit.routes.js";
 import aiRouter from "./routes/ai.routes.js";
-import categoryRouter from "./routes/category.routes.js";
+import categoryRouter from "./routes/category.routes.js"
 
 const app = express();
 

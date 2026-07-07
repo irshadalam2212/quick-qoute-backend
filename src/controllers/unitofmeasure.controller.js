@@ -4,11 +4,14 @@ import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 
 const getAllUnits = asyncHandler(async (req, res) => {
-  const units = await prisma.unit.findMany();
-
-  if (!units || units.length === 0) {
-    throw new ApiError(404, "No units found.");
-  }
+  const units = await prisma.unit.findMany({
+    where: {
+      isActive: true,
+    },
+    orderBy: {
+      name: "asc",
+    },
+  });
 
   return res
     .status(200)

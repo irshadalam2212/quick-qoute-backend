@@ -1,4 +1,4 @@
-import { prisma } from "../db/index.js";
+import prisma from "../lib/prisma.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -15,11 +15,8 @@ const createCategory = asyncHandler(async (req, res) => {
 
   const existingCategory = await prisma.category.findFirst({
     where: {
-      OR: [
-        { name },
-        { code }
-      ]
-    }
+      OR: [{ name }, { code }],
+    },
   });
 
   if (existingCategory) {
@@ -39,9 +36,9 @@ const createCategory = asyncHandler(async (req, res) => {
     },
   });
 
-  return res.status(201).json(
-    new ApiResponse(201, category, "Category created successfully.")
-  );
+  return res
+    .status(201)
+    .json(new ApiResponse(201, category, "Category created successfully."));
 });
 
 /**
@@ -57,9 +54,9 @@ const getAllCategories = asyncHandler(async (req, res) => {
     },
   });
 
-  return res.status(200).json(
-    new ApiResponse(200, categories, "Categories fetched successfully.")
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, categories, "Categories fetched successfully."));
 });
 
 /**
@@ -78,9 +75,9 @@ const getCategoryById = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Category not found.");
   }
 
-  return res.status(200).json(
-    new ApiResponse(200, category, "Category fetched successfully.")
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, category, "Category fetched successfully."));
 });
 
 /**
@@ -113,9 +110,11 @@ const updateCategory = asyncHandler(async (req, res) => {
     },
   });
 
-  return res.status(200).json(
-    new ApiResponse(200, updatedCategory, "Category updated successfully.")
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedCategory, "Category updated successfully."),
+    );
 });
 
 /**
@@ -140,9 +139,9 @@ const deleteCategory = asyncHandler(async (req, res) => {
     },
   });
 
-  return res.status(200).json(
-    new ApiResponse(200, null, "Category deleted successfully.")
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Category deleted successfully."));
 });
 
 export {
