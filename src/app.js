@@ -9,7 +9,8 @@ import quotationRouter from "./routes/quotation.routes.js";
 import invoiceRouter from "./routes/invoice.routes.js";
 import dashboardRouter from "./routes/dashboard.routes.js";
 import unitRouter from "./routes/unit.routes.js";
-import aiRoutes from "./routes/ai.routes.js";
+import aiRouter from "./routes/ai.routes.js";
+import categoryRouter from "./routes/category.routes.js";
 
 const app = express();
 
@@ -27,14 +28,19 @@ app.use(
   }),
 );
 
+//public routes
 app.use("/api/v1/healthcheck", healthCheckRouter);
 app.use("/api/v1/uom", unitRouter);
+app.use("/api/v1/categories", categoryRouter);
+
+//private routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/items", itemRouter);
 app.use("/api/v1/quotations", quotationRouter);
 app.use("/api/v1/invoices", invoiceRouter);
 app.use("/api/v1/dashboard", dashboardRouter);
 
-app.use("/api/v1/ai", aiRoutes);
+//ai routes
+app.use("/api/v1/ai", aiRouter);
 
 export default app;
