@@ -98,7 +98,7 @@ model Item {
 
   taxRate Float? @default(0)
 
-  notes String?
+  notes String? @db.Text
 
   isActive Boolean @default(true)
 

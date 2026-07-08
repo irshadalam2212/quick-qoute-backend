@@ -67,11 +67,17 @@ const createQuotation = asyncHandler(async (req, res) => {
       items: {
         create: quotation.map((item) => ({
           description: item.description,
-          unitId: Number(item.unit),
-          quantity: item.quantity,
-          price: item.price,
-          taxRate: item.taxRate || 0,
-          total: item.total,
+
+          unit: {
+            connect: {
+              id: Number(item.unitId),
+            },
+          },
+
+          quantity: Number(item.quantity),
+          price: Number(item.price),
+          taxRate: Number(item.taxRate) || 0,
+          total: Number(item.total),
         })),
       },
     },
@@ -202,11 +208,11 @@ const updateQuotation = asyncHandler(async (req, res) => {
       address,
       instructions,
 
-      subtotal,
-      taxRate,
-      taxAmount,
-      discount,
-      grandTotal,
+      subtotal: Number(subtotal),
+      taxRate: Number(taxRate) || 0,
+      taxAmount: Number(taxAmount) || 0,
+      discount: Number(discount) || 0,
+      grandTotal: Number(grandTotal),
 
       status,
 
@@ -215,10 +221,16 @@ const updateQuotation = asyncHandler(async (req, res) => {
 
         create: quotation.map((item) => ({
           description: item.description,
-          unitId: Number(item.unit),
+
+          unit: {
+            connect: {
+              id: Number(item.unitId),
+            },
+          },
+
           quantity: Number(item.quantity),
           price: Number(item.price),
-          taxRate: Number(item.taxRate),
+          taxRate: Number(item.taxRate) || 0,
           total: Number(item.total),
         })),
       },

@@ -4,22 +4,27 @@ import prisma from "../lib/prisma.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 
 const createItems = asyncHandler(async (req, res) => {
-  const {
-    description,
-    category,
-    unit,
-    baseRate,
-    taxRate,
-    notes,
-  } = req.body;
+  const { description, categoryId, unitId, baseRate, taxRate, notes } =
+    req.body;
 
   const item = await prisma.item.create({
     data: {
       description,
-      category,
-      unit,
-      baseRate,
-      taxRate: taxRate || 0,
+
+      category: {
+        connect: {
+          id: Number(categoryId),
+        },
+      },
+
+      unit: {
+        connect: {
+          id: Number(unitId),
+        },
+      },
+
+      baseRate: Number(baseRate),
+      taxRate: Number(taxRate) || 0,
       notes,
       isActive: true,
 
@@ -38,6 +43,8 @@ const createItems = asyncHandler(async (req, res) => {
           email: true,
         },
       },
+      category: true,
+      unit: true,
     },
   });
 
@@ -97,15 +104,8 @@ const getItemById = asyncHandler(async (req, res) => {
 const updateItem = asyncHandler(async (req, res) => {
   const { itemId } = req.params;
 
-  const {
-    description,
-    category,
-    unit,
-    baseRate,
-    taxRate,
-    notes,
-    isActive,
-  } = req.body;
+  const { description, category, unit, baseRate, taxRate, notes, isActive } =
+    req.body;
 
   const existingItem = await prisma.item.findUnique({
     where: {
@@ -165,9 +165,9 @@ const deleteItem = asyncHandler(async (req, res) => {
     },
   });
 
-  return res.status(200).json(
-    new ApiResponse(200, {}, "Item deleted successfully")
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Item deleted successfully"));
 });
 
 export { createItems, getAllItems, getItemById, updateItem, deleteItem };
