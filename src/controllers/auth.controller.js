@@ -38,7 +38,25 @@ const generateAccessAndRefreshToken = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { email, name, password } = req.body;
+  const {
+    name,
+    email,
+    password,
+    companyName,
+    mobileNumber,
+    alternateMobile,
+    website,
+    gstNumber,
+    panNumber,
+    services,
+    address,
+    logo,
+    signature,
+  } = req.body;
+
+  if (!name || !email || !password) {
+    throw new ApiError(400, "Name, email and password are required.");
+  }
 
   const existingUser = await prisma.user.findUnique({
     where: {
@@ -55,12 +73,36 @@ const registerUser = asyncHandler(async (req, res) => {
   const user = await prisma.user.create({
     data: {
       name,
-      email,
+      email: email.toLowerCase().trim(),
       password: hashedPassword,
+
+      companyName,
+      mobileNumber,
+      alternateMobile,
+      website,
+      gstNumber,
+      panNumber,
+      services,
+      address,
+      logo,
+      signature,
     },
-    omit: {
-      password: true,
-      refreshToken: true,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      companyName: true,
+      mobileNumber: true,
+      alternateMobile: true,
+      website: true,
+      gstNumber: true,
+      panNumber: true,
+      services: true,
+      address: true,
+      logo: true,
+      signature: true,
+      role: true,
+      createdAt: true,
     },
   });
 
@@ -151,9 +193,44 @@ const logout = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: req.user.id,
+    },
+
+    select: {
+      id: true,
+      name: true,
+      email: true,
+
+      companyName: true,
+      mobileNumber: true,
+      alternateMobile: true,
+
+      website: true,
+      gstNumber: true,
+      panNumber: true,
+
+      services: true,
+      address: true,
+
+      logo: true,
+      signature: true,
+
+      role: true,
+
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
   return res
     .status(200)
-    .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
+    .json(new ApiResponse(200, user, "Current user fetched successfully."));
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -167,7 +244,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   try {
     const decodedToken = jwt.verify(
       incomingRefreshToken,
-      process.env.REFRESH_TOKEN_SECRET
+      process.env.REFRESH_TOKEN_SECRET,
     );
 
     const user = await prisma.user.findUnique({
@@ -203,12 +280,93 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             accessToken,
             refreshToken: newRefreshToken,
           },
-          "Access token refreshed"
-        )
+          "Access token refreshed",
+        ),
       );
   } catch (error) {
     throw new ApiError(401, "Invalid refresh token");
   }
 });
 
-export { registerUser, login, logout, getCurrentUser, refreshAccessToken };
+const updateProfile = asyncHandler(async (req, res) => {
+  const {
+    name,
+    companyName,
+    mobileNumber,
+    alternateMobile,
+    website,
+    gstNumber,
+    panNumber,
+    services,
+    address,
+    logo,
+    signature,
+  } = req.body;
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: req.user.id,
+    },
+  });
+
+  if (!user) {
+    throw new ApiError(404, "User not found.");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: {
+      id: req.user.id,
+    },
+
+    data: {
+      ...(name !== undefined && { name }),
+      ...(companyName !== undefined && { companyName }),
+      ...(mobileNumber !== undefined && { mobileNumber }),
+      ...(alternateMobile !== undefined && { alternateMobile }),
+      ...(website !== undefined && { website }),
+      ...(gstNumber !== undefined && { gstNumber }),
+      ...(panNumber !== undefined && { panNumber }),
+      ...(services !== undefined && { services }),
+      ...(address !== undefined && { address }),
+      ...(logo !== undefined && { logo }),
+      ...(signature !== undefined && { signature }),
+    },
+
+    select: {
+      id: true,
+      name: true,
+      email: true,
+
+      companyName: true,
+      mobileNumber: true,
+      alternateMobile: true,
+
+      website: true,
+      gstNumber: true,
+      panNumber: true,
+
+      services: true,
+      address: true,
+
+      logo: true,
+      signature: true,
+
+      role: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedUser, "Profile updated successfully."));
+});
+
+export {
+  registerUser,
+  login,
+  logout,
+  getCurrentUser,
+  refreshAccessToken,
+  updateProfile,
+};

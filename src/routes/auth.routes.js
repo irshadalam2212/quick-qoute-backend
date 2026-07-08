@@ -5,6 +5,7 @@ import {
   logout,
   refreshAccessToken,
   registerUser,
+  updateProfile,
 } from "../controllers/auth.controller.js";
 import { validate } from "../middleware/validator.middleware.js";
 import {
@@ -22,6 +23,7 @@ router.route("/refresh-token").post(refreshAccessToken);
 
 //secure routes
 router.route("/logout").post(verifyJWT, logout);
-router.route("/current-user").post(verifyJWT, getCurrentUser);
+router.route("/profile").get(verifyJWT, getCurrentUser);
+router.route("/update-profile").put(verifyJWT, updateProfile);
 
 export default router;

@@ -10,20 +10,30 @@ datasource db {
 model User {
   id Int @id @default(autoincrement())
 
-  name     String
-  email    String @unique
-  password String
+  name          String
+  email         String @unique
+  password      String
 
-  role String @default("USER")
+  companyName   String?
+  mobileNumber  String?
+  alternateMobile String?
 
-  refreshToken String?
+  website       String?
+  gstNumber     String?
+  panNumber     String?
+
+  services      String? @db.Text
+  address       String? @db.Text
+
+  logo          String?
+  signature     String?
+
+  role          String @default("USER")
+  refreshToken  String?
 
   quotations Quotation[]
-
-  invoices Invoice[]
-
-  items Item[] @relation("UserItems")
-
+  invoices   Invoice[]
+  items      Item[] @relation("UserItems")
   categories Category[] @relation("UserCategories")
 
   createdAt DateTime @default(now())

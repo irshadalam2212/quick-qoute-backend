@@ -10,6 +10,8 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
   sixMonthsAgo.setDate(1);
 
+  const userId = req.user.id;
+
   // Total counts
   const [
     totalQuotations,
@@ -20,12 +22,21 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
     unpaidInvoicesCount,
     unpaidInvoicesAmount,
   ] = await Promise.all([
-    prisma.quotation.count(),
+    prisma.quotation.count({
+      where: {
+        createdById: userId,
+      },
+    }),
 
-    prisma.invoice.count(),
+    prisma.invoice.count({
+      where: {
+        createdById: userId,
+      },
+    }),
 
     prisma.quotation.count({
       where: {
+        createdById: userId,
         createdAt: {
           gte: thirtyDaysAgo,
         },
@@ -34,6 +45,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
 
     prisma.invoice.count({
       where: {
+        createdById: userId,
         createdAt: {
           gte: thirtyDaysAgo,
         },
@@ -42,6 +54,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
 
     prisma.quotation.count({
       where: {
+        createdById: userId,
         status: {
           in: ["DRAFT", "SUBMITTED"],
         },
@@ -50,12 +63,14 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
 
     prisma.invoice.count({
       where: {
+        createdById: userId,
         paymentStatus: "UNPAID",
       },
     }),
 
     prisma.invoice.aggregate({
       where: {
+        createdById: userId,
         paymentStatus: "UNPAID",
       },
       _sum: {
@@ -68,6 +83,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
   const [quotations, invoices] = await Promise.all([
     prisma.quotation.findMany({
       where: {
+        createdById: userId,
         createdAt: {
           gte: sixMonthsAgo,
         },
@@ -79,6 +95,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
 
     prisma.invoice.findMany({
       where: {
+        createdById: userId,
         createdAt: {
           gte: sixMonthsAgo,
         },
@@ -86,6 +103,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
       select: {
         createdAt: true,
         grandTotal: true,
+        paymentStatus: true,
       },
     }),
   ]);
@@ -120,7 +138,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
     }
   });
 
-  // Count invoices & revenue
+  // Count invoices & paid revenue
   invoices.forEach((invoice) => {
     const date = new Date(invoice.createdAt);
 
@@ -128,7 +146,10 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
 
     if (monthlyMap.has(key)) {
       monthlyMap.get(key).invoices++;
-      monthlyMap.get(key).revenue += invoice.grandTotal;
+
+      if (invoice.paymentStatus === "PAID") {
+        monthlyMap.get(key).revenue += invoice.grandTotal;
+      }
     }
   });
 
@@ -145,16 +166,13 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
     totalInvoices,
     totalInvoices30d: invoices30d,
     invoicesChange:
-      totalInvoices === 0
-        ? 0
-        : Math.round((invoices30d / totalInvoices) * 100),
+      totalInvoices === 0 ? 0 : Math.round((invoices30d / totalInvoices) * 100),
 
     pendingQuotations,
 
     unpaidInvoicesCount,
 
-    unpaidInvoicesAmount:
-      unpaidInvoicesAmount._sum.grandTotal ?? 0,
+    unpaidInvoicesAmount: unpaidInvoicesAmount._sum.grandTotal ?? 0,
 
     monthlyRevenue: monthlyData.map((m) => m.revenue),
 
@@ -165,11 +183,9 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
     monthlyData,
   };
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      metrics,
-      "Dashboard metrics fetched successfully!"
-    )
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, metrics, "Dashboard metrics fetched successfully!"),
+    );
 });
