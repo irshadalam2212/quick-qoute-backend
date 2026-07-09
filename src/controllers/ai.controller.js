@@ -1,7 +1,7 @@
 import { generateScopeDescription } from "../services/ai.service.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { ApiError } from "../utils/ApiError.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../utils/apierror.js";
+import { asyncHandler } from "../utils/asynchandler.js";
+import { ApiResponse } from "../utils/apiresponse.js";
 
 export const generateDescription = asyncHandler(async (req, res) => {
   const { prompt } = req.body;
