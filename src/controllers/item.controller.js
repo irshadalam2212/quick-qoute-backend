@@ -104,7 +104,7 @@ const getItemById = asyncHandler(async (req, res) => {
 const updateItem = asyncHandler(async (req, res) => {
   const { itemId } = req.params;
 
-  const { description, category, unit, baseRate, taxRate, notes, isActive } =
+  const { description, categoryId, unitId, baseRate, taxRate, notes } =
     req.body;
 
   const existingItem = await prisma.item.findUnique({
@@ -123,12 +123,11 @@ const updateItem = asyncHandler(async (req, res) => {
     },
     data: {
       description,
-      category,
-      unit,
+      categoryId,
+      unitId,
       baseRate,
       taxRate,
       notes,
-      isActive,
     },
     include: {
       createdBy: {
