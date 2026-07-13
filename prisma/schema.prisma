@@ -72,7 +72,7 @@ model Quotation {
 model QuotationItem {
   id Int @id @default(autoincrement())
 
-  description String
+  description String @db.Text
 
   unitId Int
   unit   Unit @relation(fields: [unitId], references: [id])
