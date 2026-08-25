@@ -1,7 +1,7 @@
 import prisma from "../lib/prisma.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../utils/asynchandler.js";
+import { ApiResponse } from "../utils/apiresponse.js";
+import { ApiError } from "../utils/apierror.js";
 
 /**
  * Create Category
