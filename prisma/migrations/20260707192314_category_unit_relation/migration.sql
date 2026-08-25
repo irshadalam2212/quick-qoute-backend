@@ -10,11 +10,11 @@
 
 */
 -- AlterTable
-ALTER TABLE `invoiceitem` DROP COLUMN `unit`,
+ALTER TABLE `InvoiceItem` DROP COLUMN `unit`,
     ADD COLUMN `unitId` INTEGER NOT NULL;
 
 -- AlterTable
-ALTER TABLE `item` DROP COLUMN `category`,
+ALTER TABLE `Item` DROP COLUMN `category`,
     DROP COLUMN `unit`,
     ADD COLUMN `categoryId` INTEGER NOT NULL,
     ADD COLUMN `unitId` INTEGER NOT NULL;

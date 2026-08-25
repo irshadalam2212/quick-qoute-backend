@@ -5,4 +5,4 @@
 
 */
 -- AlterTable
-ALTER TABLE `invoiceitem` MODIFY `unit` DOUBLE NULL;
+ALTER TABLE `InvoiceItem` MODIFY `unit` DOUBLE NULL;

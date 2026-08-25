@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `user` ADD COLUMN `address` TEXT NULL,
+ALTER TABLE `User` ADD COLUMN `address` TEXT NULL,
     ADD COLUMN `alternateMobile` VARCHAR(191) NULL,
     ADD COLUMN `companyName` VARCHAR(191) NULL,
     ADD COLUMN `gstNumber` VARCHAR(191) NULL,

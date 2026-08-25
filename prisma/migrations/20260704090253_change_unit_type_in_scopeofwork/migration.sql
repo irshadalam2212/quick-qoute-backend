@@ -5,4 +5,4 @@
 
 */
 -- AlterTable
-ALTER TABLE `item` MODIFY `unit` INTEGER NULL;
+ALTER TABLE `Item` MODIFY `unit` INTEGER NULL;
