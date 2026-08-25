@@ -32,3 +32,5 @@ jobs:
 
       - name: Validate Prisma schema
         run: npx prisma validate
+        env:
+          DATABASE_URL: mysql://ci_user:ci_password@localhost:3306/ci_database

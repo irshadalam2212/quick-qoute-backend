@@ -20,11 +20,17 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 
+const allowedOrigins = [
+  "http://localhost:4000",
+  "https://quickqoute.netlify.app",
+];
+
 app.use(
   cors({
-    origin: ["http://localhost:4000", "https://quickqoute.netlify.app"],
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   }),
 );
 
