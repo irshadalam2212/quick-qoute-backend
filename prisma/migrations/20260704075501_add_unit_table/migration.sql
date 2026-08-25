@@ -6,7 +6,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `quotationitem` DROP COLUMN `unit`,
+ALTER TABLE `QuotationItem` DROP COLUMN `unit`,
     ADD COLUMN `unitId` INTEGER NOT NULL;
 
 -- CreateTable
