@@ -24,16 +24,6 @@ const createInvoice = asyncHandler(async (req, res) => {
     throw new ApiError(400, "At least one invoice item is required.");
   }
 
-  const quotation = await prisma.quotation.findUnique({
-    where: {
-      id: Number(quotationId),
-    },
-  });
-
-  if (!quotation) {
-    throw new ApiError(404, "Quotation not found.");
-  }
-
   const invoice = await prisma.invoice.create({
     data: {
       clientName,
@@ -103,14 +93,12 @@ const createInvoice = asyncHandler(async (req, res) => {
 });
 
 const getAllInvoices = asyncHandler(async (req, res) => {
-  const where = {};
-
-  if (req.query.paymentStatus) {
-    where.paymentStatus = req.query.paymentStatus.toUpperCase();
-  }
+  const userId = req.user.id;
 
   const invoices = await prisma.invoice.findMany({
-    where,
+    where: {
+      createdById: userId
+    },
 
     include: {
       createdBy: {
@@ -143,10 +131,12 @@ const getAllInvoices = asyncHandler(async (req, res) => {
 
 const getInvoiceById = asyncHandler(async (req, res) => {
   const { invoiceId } = req.params;
+  const userId = req.user.id;
 
   const invoice = await prisma.invoice.findUnique({
     where: {
       id: Number(invoiceId),
+      createdById: userId
     },
 
     include: {
@@ -180,6 +170,7 @@ const getInvoiceById = asyncHandler(async (req, res) => {
 
 const updateInvoice = asyncHandler(async (req, res) => {
   const { invoiceId } = req.params;
+  const userId = req.user.id;
 
   const {
     clientName,
@@ -197,6 +188,7 @@ const updateInvoice = asyncHandler(async (req, res) => {
   const existingInvoice = await prisma.invoice.findUnique({
     where: {
       id: Number(invoiceId),
+      createdById: userId
     },
   });
 
@@ -208,6 +200,7 @@ const updateInvoice = asyncHandler(async (req, res) => {
   const quotation = await prisma.quotation.findUnique({
     where: {
       id: Number(quotationId),
+      createdById: userId
     },
   });
 
@@ -297,10 +290,12 @@ const updateInvoice = asyncHandler(async (req, res) => {
 
 const deleteInvoice = asyncHandler(async (req, res) => {
   const { invoiceId } = req.params;
+  const userId = req.user.id;
 
   const existingInvoice = await prisma.invoice.findUnique({
     where: {
       id: Number(invoiceId),
+      createdById: userId
     },
     select: {
       id: true,

@@ -31,16 +31,6 @@ const createQuotation = asyncHandler(async (req, res) => {
     );
   }
 
-  const existingQuotation = await prisma.quotation.findUnique({
-    where: {
-      quotationNo,
-    },
-  });
-
-  if (existingQuotation) {
-    throw new ApiError(409, "Quotation number already exists.");
-  }
-
   const newQuotation = await prisma.quotation.create({
     data: {
       quotationNo,
@@ -100,22 +90,12 @@ const createQuotation = asyncHandler(async (req, res) => {
 });
 
 const getAllQuotation = asyncHandler(async (req, res) => {
-  const where = {};
-
-  if (req.query.status) {
-    where.status = req.query.status.toUpperCase();
-  }
-
-  if (req.query.clientName) {
-    where.clientName = {
-      contains: req.query.clientName,
-      mode: "insensitive",
-    };
-  }
-
+  const userId = req.user.id;
+  const where = {
+    createdById: userId,
+  };
   const quotations = await prisma.quotation.findMany({
     where,
-
     include: {
       createdBy: {
         select: {
@@ -139,10 +119,12 @@ const getAllQuotation = asyncHandler(async (req, res) => {
 
 const getQuotationById = asyncHandler(async (req, res) => {
   const { quotationId } = req.params;
+  const userId = req.user.id;
 
   const quotation = await prisma.quotation.findUnique({
     where: {
       id: Number(quotationId),
+      createdById: userId
     },
 
     include: {
@@ -168,6 +150,7 @@ const getQuotationById = asyncHandler(async (req, res) => {
 
 const updateQuotation = asyncHandler(async (req, res) => {
   const { quotationId } = req.params;
+  const userId = req.user.id;
 
   const {
     quotationNo,
@@ -188,6 +171,7 @@ const updateQuotation = asyncHandler(async (req, res) => {
   const existingQuotation = await prisma.quotation.findUnique({
     where: {
       id: Number(quotationId),
+      createdById: userId,
     },
   });
 
@@ -257,10 +241,12 @@ const updateQuotation = asyncHandler(async (req, res) => {
 
 const deleteQuotation = asyncHandler(async (req, res) => {
   const { quotationId } = req.params;
+  const userId = req.user.id;
 
   const quotation = await prisma.quotation.findUnique({
     where: {
       id: Number(quotationId),
+      createdById: userId
     },
   });
 
