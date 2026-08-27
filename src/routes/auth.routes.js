@@ -13,11 +13,28 @@ import {
   userLoginValidator,
 } from "../validators/index.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
+import { upload } from "../middleware/multer.middleware.js";
 
 const router = Router();
 
 //public routes
-router.route("/register").post(userRegisterValidator(), validate, registerUser);
+router
+  .route("/register")
+  .post(
+    upload.fields([
+      {
+        name: "logo",
+        maxCount: 1,
+      },
+      {
+        name: "signature",
+        maxCount: 1,
+      },
+    ]),
+    userRegisterValidator(),
+    validate,
+    registerUser
+  );
 router.route("/login").post(userLoginValidator(), validate, login);
 router.route("/refresh-token").post(refreshAccessToken);
 

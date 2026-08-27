@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/apiresponse.js";
 import { ApiError } from "../utils/apierror.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -50,17 +51,14 @@ const registerUser = asyncHandler(async (req, res) => {
     panNumber,
     services,
     address,
-    logo,
-    signature,
   } = req.body;
 
-  if (!name || !email || !password) {
-    throw new ApiError(400, "Name, email and password are required.");
-  }
+  const normalizedEmail = email.toLowerCase().trim();
 
+  // Check existing user
   const existingUser = await prisma.user.findUnique({
     where: {
-      email,
+      email: normalizedEmail,
     },
   });
 
@@ -68,12 +66,41 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User already exists");
   }
 
+  // Files uploaded by multer
+  const logoFile = req.files?.logo?.[0];
+  const signatureFile = req.files?.signature?.[0];
+
+  let logoUrl = null;
+  let signatureUrl = null;
+
+  // Upload logo
+  if (logoFile) {
+    const logoResult = await uploadToCloudinary(
+      logoFile.buffer,
+      "quickquote/users/logos"
+    );
+
+    logoUrl = logoResult.secure_url;
+  }
+
+  // Upload signature
+  if (signatureFile) {
+    const signatureResult = await uploadToCloudinary(
+      signatureFile.buffer,
+      "quickquote/users/signatures"
+    );
+
+    signatureUrl = signatureResult.secure_url;
+  }
+
+  // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
 
+  // Create user
   const user = await prisma.user.create({
     data: {
-      name,
-      email: email.toLowerCase().trim(),
+      name: name.trim(),
+      email: normalizedEmail,
       password: hashedPassword,
 
       companyName,
@@ -84,23 +111,30 @@ const registerUser = asyncHandler(async (req, res) => {
       panNumber,
       services,
       address,
-      logo,
-      signature,
+
+      logo: logoUrl,
+      signature: signatureUrl,
     },
+
     select: {
       id: true,
       name: true,
       email: true,
+
       companyName: true,
       mobileNumber: true,
       alternateMobile: true,
+
       website: true,
       gstNumber: true,
       panNumber: true,
+
       services: true,
       address: true,
+
       logo: true,
       signature: true,
+
       role: true,
       createdAt: true,
     },
@@ -108,7 +142,13 @@ const registerUser = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiResponse(201, user, "User registered successfully"));
+    .json(
+      new ApiResponse(
+        201,
+        user,
+        "User registered successfully"
+      )
+    );
 });
 
 const login = asyncHandler(async (req, res) => {
