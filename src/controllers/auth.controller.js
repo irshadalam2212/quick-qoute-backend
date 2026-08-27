@@ -75,22 +75,22 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // Upload logo
   if (logoFile) {
-    const logoResult = await uploadToCloudinary(
+    const result = await uploadToCloudinary(
       logoFile.buffer,
-      "quickquote/users/logos"
+      "quickquote/users/logos",
     );
 
-    logoUrl = logoResult.secure_url;
+    logoUrl = result.secure_url;
   }
 
   // Upload signature
   if (signatureFile) {
-    const signatureResult = await uploadToCloudinary(
+    const result = await uploadToCloudinary(
       signatureFile.buffer,
-      "quickquote/users/signatures"
+      "quickquote/users/signatures",
     );
 
-    signatureUrl = signatureResult.secure_url;
+    signatureUrl = result.secure_url;
   }
 
   // Hash password
