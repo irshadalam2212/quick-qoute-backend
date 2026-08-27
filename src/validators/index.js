@@ -1,6 +1,6 @@
 import { body } from "express-validator";
 
-export const userRegisterValidator = () => {
+const userRegisterValidator = () => {
   return [
     // Personal Information
     body("name")
