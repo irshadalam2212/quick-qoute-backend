@@ -105,6 +105,7 @@ const getItemById = asyncHandler<ItemParams>(async (req, res) => {
 const updateItem = asyncHandler<ItemParams, Partial<ItemBody>>(
   async (req, res) => {
     const { itemId } = req.params;
+    const userId = getAuthUser(req).id;
 
     const { description, categoryId, unitId, baseRate, taxRate, notes } =
       req.body;
@@ -112,6 +113,7 @@ const updateItem = asyncHandler<ItemParams, Partial<ItemBody>>(
     const existingItem = await prisma.item.findUnique({
       where: {
         id: Number(itemId),
+        createdById: userId,
       },
     });
 
@@ -142,10 +144,12 @@ const updateItem = asyncHandler<ItemParams, Partial<ItemBody>>(
 
 const deleteItem = asyncHandler<ItemParams>(async (req, res) => {
   const { itemId } = req.params;
+  const userId = getAuthUser(req).id;
 
   const existingItem = await prisma.item.findUnique({
     where: {
       id: Number(itemId),
+      createdById: userId,
     },
   });
 

@@ -155,6 +155,10 @@ const updateQuotation = asyncHandler<QuotationParams, QuotationBody>(
       status,
     } = req.body;
 
+    if (!Array.isArray(quotation) || quotation.length === 0) {
+      throw new ApiError(400, "At least one quotation item is required.");
+    }
+
     const existingQuotation = await prisma.quotation.findUnique({
       where: {
         id: Number(quotationId),

@@ -53,6 +53,18 @@ const createInvoice = asyncHandler<ParamsDictionary, InvoiceBody>(
       throw new ApiError(400, "At least one invoice item is required.");
     }
 
+    const quotation = await prisma.quotation.findUnique({
+      where: {
+        id: Number(quotationId),
+        createdById: authUser.id,
+      },
+      select: { id: true },
+    });
+
+    if (!quotation) {
+      throw new ApiError(404, "Quotation not found.");
+    }
+
     const invoice = await prisma.invoice.create({
       data: {
         clientName,
@@ -151,6 +163,10 @@ const updateInvoice = asyncHandler<InvoiceParams, InvoiceBody>(
       paymentStatus,
       quotationId,
     } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new ApiError(400, "At least one invoice item is required.");
+    }
 
     const existingInvoice = await prisma.invoice.findUnique({
       where: {

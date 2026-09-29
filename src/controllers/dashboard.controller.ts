@@ -17,9 +17,9 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-  sixMonthsAgo.setDate(1);
+  // Build month boundaries from day 1 so setMonth() cannot overflow on the 29th-31st.
+  const now = new Date();
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
   const userId = getAuthUser(req).id;
 
@@ -123,8 +123,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
   const monthlyMap = new Map<string, MonthlyStat>();
 
   for (let i = 5; i >= 0; i--) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
 
     monthlyMap.set(monthKey(date), {
       month: date.toLocaleString("default", {

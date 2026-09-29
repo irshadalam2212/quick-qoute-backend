@@ -1,4 +1,5 @@
 import multer from "multer";
+import { ApiError } from "../utils/apierror.js";
 
 const storage = multer.memoryStorage();
 
@@ -13,7 +14,7 @@ export const upload = multer({
 
   fileFilter: (_req, file, cb) => {
     if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error("Only JPG, PNG and WEBP images are allowed"));
+      return cb(new ApiError(400, "Only JPG, PNG and WEBP images are allowed"));
     }
 
     cb(null, true);

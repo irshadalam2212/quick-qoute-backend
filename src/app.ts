@@ -11,6 +11,7 @@ import dashboardRouter from "./routes/dashboard.routes.js";
 import unitRouter from "./routes/unit.routes.js";
 import aiRouter from "./routes/ai.routes.js";
 import categoryRouter from "./routes/category.routes.js";
+import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
 
 const app: Express = express();
 
@@ -48,5 +49,9 @@ app.use("/api/v1/dashboard", dashboardRouter);
 
 //ai routes
 app.use("/api/v1/ai", aiRouter);
+
+//error handling (must be registered after all routes)
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;
