@@ -1,6 +1,17 @@
 import prisma from "../lib/prisma.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 import { asyncHandler } from "../utils/asynchandler.js";
+import { getAuthUser } from "../utils/auth.js";
+
+interface MonthlyStat {
+  month: string;
+  quotations: number;
+  invoices: number;
+  revenue: number;
+}
+
+const monthKey = (date: Date): string =>
+  `${date.getFullYear()}-${date.getMonth() + 1}`;
 
 export const getDashboardMetrics = asyncHandler(async (req, res) => {
   const thirtyDaysAgo = new Date();
@@ -10,7 +21,7 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
   sixMonthsAgo.setDate(1);
 
-  const userId = req.user.id;
+  const userId = getAuthUser(req).id;
 
   // Total counts
   const [
@@ -109,15 +120,13 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
   ]);
 
   // Initialize last 6 months
-  const monthlyMap = new Map();
+  const monthlyMap = new Map<string, MonthlyStat>();
 
   for (let i = 5; i >= 0; i--) {
     const date = new Date();
     date.setMonth(date.getMonth() - i);
 
-    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
-
-    monthlyMap.set(key, {
+    monthlyMap.set(monthKey(date), {
       month: date.toLocaleString("default", {
         month: "short",
       }),
@@ -129,26 +138,22 @@ export const getDashboardMetrics = asyncHandler(async (req, res) => {
 
   // Count quotations
   quotations.forEach((quotation) => {
-    const date = new Date(quotation.createdAt);
+    const stat = monthlyMap.get(monthKey(new Date(quotation.createdAt)));
 
-    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
-
-    if (monthlyMap.has(key)) {
-      monthlyMap.get(key).quotations++;
+    if (stat) {
+      stat.quotations++;
     }
   });
 
   // Count invoices & paid revenue
   invoices.forEach((invoice) => {
-    const date = new Date(invoice.createdAt);
+    const stat = monthlyMap.get(monthKey(new Date(invoice.createdAt)));
 
-    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
-
-    if (monthlyMap.has(key)) {
-      monthlyMap.get(key).invoices++;
+    if (stat) {
+      stat.invoices++;
 
       if (invoice.paymentStatus === "PAID") {
-        monthlyMap.get(key).revenue += invoice.grandTotal;
+        stat.revenue += invoice.grandTotal;
       }
     }
   });

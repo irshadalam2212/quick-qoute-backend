@@ -34,3 +34,8 @@ jobs:
         run: npx prisma validate
         env:
           DATABASE_URL: mysql://ci_user:ci_password@localhost:3306/ci_database
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

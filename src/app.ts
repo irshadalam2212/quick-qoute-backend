@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
@@ -10,9 +10,9 @@ import invoiceRouter from "./routes/invoice.routes.js";
 import dashboardRouter from "./routes/dashboard.routes.js";
 import unitRouter from "./routes/unit.routes.js";
 import aiRouter from "./routes/ai.routes.js";
-import categoryRouter from "./routes/category.routes.js"
+import categoryRouter from "./routes/category.routes.js";
 
-const app = express();
+const app: Express = express();
 
 //middlewares
 app.use(express.json({ limit: "16kb" }));

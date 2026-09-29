@@ -1,6 +1,8 @@
 import { ai } from "../config/gemini.js";
 
-export const generateScopeDescription = async (userInput) => {
+export const generateScopeDescription = async (
+  userInput: string,
+): Promise<string | undefined> => {
   const prompt = `
 You are a Senior Civil Engineer, Quantity Surveyor, and Estimation Expert.
 

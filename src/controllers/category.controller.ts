@@ -1,50 +1,59 @@
+import type { ParamsDictionary } from "express-serve-static-core";
 import prisma from "../lib/prisma.js";
+import type { CreateCategoryBody, UpdateCategoryBody } from "../types/api.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 import { ApiError } from "../utils/apierror.js";
+import { getAuthUser } from "../utils/auth.js";
+
+type CategoryParams = { categoryId: string };
 
 /**
  * Create Category
  */
-const createCategory = asyncHandler(async (req, res) => {
-  const { name, code, description } = req.body;
+const createCategory = asyncHandler<ParamsDictionary, CreateCategoryBody>(
+  async (req, res) => {
+    const { name, code, description } = req.body;
 
-  if (!name || !code) {
-    throw new ApiError(400, "Category name and code are required.");
-  }
+    if (!name || !code) {
+      throw new ApiError(400, "Category name and code are required.");
+    }
 
-  const existingCategory = await prisma.category.findFirst({
-    where: {
-      OR: [{ name }, { code }],
-    },
-  });
+    const authUser = getAuthUser(req);
 
-  if (existingCategory) {
-    throw new ApiError(409, "Category already exists.");
-  }
+    const existingCategory = await prisma.category.findFirst({
+      where: {
+        OR: [{ name }, { code }],
+      },
+    });
 
-  const category = await prisma.category.create({
-    data: {
-      name,
-      code: code.toUpperCase(),
-      description,
-      createdBy: {
-        connect: {
-          id: req.user.id,
+    if (existingCategory) {
+      throw new ApiError(409, "Category already exists.");
+    }
+
+    const category = await prisma.category.create({
+      data: {
+        name,
+        code: code.toUpperCase(),
+        description,
+        createdBy: {
+          connect: {
+            id: authUser.id,
+          },
         },
       },
-    },
-  });
+    });
 
-  return res
-    .status(201)
-    .json(new ApiResponse(201, category, "Category created successfully."));
-});
+    return res
+      .status(201)
+      .json(new ApiResponse(201, category, "Category created successfully."));
+  },
+);
 
 /**
  * Get All Categories
  */
-const getAllCategories = asyncHandler(async (req, res) => {
+const getAllCategories = asyncHandler(async (_req, res) => {
   const categories = await prisma.category.findMany({
     where: {
       isActive: true,
@@ -62,7 +71,7 @@ const getAllCategories = asyncHandler(async (req, res) => {
 /**
  * Get Category By Id
  */
-const getCategoryById = asyncHandler(async (req, res) => {
+const getCategoryById = asyncHandler<CategoryParams>(async (req, res) => {
   const { categoryId } = req.params;
 
   const category = await prisma.category.findUnique({
@@ -83,44 +92,46 @@ const getCategoryById = asyncHandler(async (req, res) => {
 /**
  * Update Category
  */
-const updateCategory = asyncHandler(async (req, res) => {
-  const { categoryId } = req.params;
+const updateCategory = asyncHandler<CategoryParams, UpdateCategoryBody>(
+  async (req, res) => {
+    const { categoryId } = req.params;
 
-  const { name, code, description, isActive } = req.body;
+    const { name, code, description, isActive } = req.body;
 
-  const category = await prisma.category.findUnique({
-    where: {
-      id: Number(categoryId),
-    },
-  });
+    const category = await prisma.category.findUnique({
+      where: {
+        id: Number(categoryId),
+      },
+    });
 
-  if (!category) {
-    throw new ApiError(404, "Category not found.");
-  }
+    if (!category) {
+      throw new ApiError(404, "Category not found.");
+    }
 
-  const updatedCategory = await prisma.category.update({
-    where: {
-      id: Number(categoryId),
-    },
-    data: {
-      name,
-      code: code?.toUpperCase(),
-      description,
-      isActive,
-    },
-  });
+    const updatedCategory = await prisma.category.update({
+      where: {
+        id: Number(categoryId),
+      },
+      data: {
+        name,
+        code: code?.toUpperCase(),
+        description,
+        isActive,
+      },
+    });
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, updatedCategory, "Category updated successfully."),
-    );
-});
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, updatedCategory, "Category updated successfully."),
+      );
+  },
+);
 
 /**
  * Delete Category
  */
-const deleteCategory = asyncHandler(async (req, res) => {
+const deleteCategory = asyncHandler<CategoryParams>(async (req, res) => {
   const { categoryId } = req.params;
 
   const category = await prisma.category.findUnique({

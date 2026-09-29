@@ -1,111 +1,106 @@
+import type { ParamsDictionary } from "express-serve-static-core";
+import type { Prisma } from "@prisma/client";
+import type { QuotationBody } from "../types/api.js";
 import { ApiError } from "../utils/apierror.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiResponse } from "../utils/apiresponse.js";
+import { getAuthUser } from "../utils/auth.js";
+import { toLineItemCreate } from "../utils/lineitems.js";
 import prisma from "../lib/prisma.js";
 
-const createQuotation = asyncHandler(async (req, res) => {
-  const {
-    quotationNo,
-    date,
-    clientName,
-    projectName,
-    address,
-    instructions,
-    quotation,
-    subtotal,
-    taxRate,
-    taxAmount,
-    discount,
-    grandTotal,
-  } = req.body;
+type QuotationParams = { quotationId: string };
 
-  if (
-    !quotationNo ||
-    !address ||
-    !Array.isArray(quotation) ||
-    quotation.length === 0
-  ) {
-    throw new ApiError(
-      400,
-      "Quotation number, address and quotation items are required.",
-    );
-  }
+const quotationInclude = {
+  createdBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  items: true,
+} satisfies Prisma.QuotationInclude;
 
-  const newQuotation = await prisma.quotation.create({
-    data: {
+const createQuotation = asyncHandler<ParamsDictionary, QuotationBody>(
+  async (req, res) => {
+    const authUser = getAuthUser(req);
+
+    const {
       quotationNo,
-      date: date ? new Date(date) : new Date(),
+      date,
       clientName,
       projectName,
       address,
       instructions,
-
+      quotation,
       subtotal,
-      taxRate: taxRate || 0,
-      taxAmount: taxAmount || 0,
-      discount: discount || 0,
+      taxRate,
+      taxAmount,
+      discount,
       grandTotal,
+    } = req.body;
 
-      status: "DRAFT",
+    if (
+      !quotationNo ||
+      !address ||
+      !Array.isArray(quotation) ||
+      quotation.length === 0
+    ) {
+      throw new ApiError(
+        400,
+        "Quotation number, address and quotation items are required.",
+      );
+    }
 
-      createdBy: {
-        connect: {
-          id: req.user.id,
-        },
-      },
+    const newQuotation = await prisma.quotation.create({
+      data: {
+        quotationNo,
+        date: date ? new Date(date) : new Date(),
+        clientName,
+        projectName,
+        address,
+        instructions,
 
-      items: {
-        create: quotation.map((item) => ({
-          description: item.description,
+        subtotal,
+        taxRate: taxRate || 0,
+        taxAmount: taxAmount || 0,
+        discount: discount || 0,
+        grandTotal,
 
-          unit: {
-            connect: {
-              id: Number(item.unitId),
-            },
+        status: "DRAFT",
+
+        createdBy: {
+          connect: {
+            id: authUser.id,
           },
+        },
 
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          taxRate: Number(item.taxRate) || 0,
-          total: Number(item.total),
-        })),
-      },
-    },
-
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+        items: {
+          create: quotation.map(toLineItemCreate),
         },
       },
-      items: true,
-    },
-  });
 
-  return res
-    .status(201)
-    .json(new ApiResponse(201, newQuotation, "Quotation created successfully"));
-});
+      include: quotationInclude,
+    });
+
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(201, newQuotation, "Quotation created successfully"),
+      );
+  },
+);
 
 const getAllQuotation = asyncHandler(async (req, res) => {
-  const userId = req.user.id;
-  const where = {
+  const userId = getAuthUser(req).id;
+
+  const where: Prisma.QuotationWhereInput = {
     createdById: userId,
   };
+
   const quotations = await prisma.quotation.findMany({
     where,
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-      items: true,
-    },
+    include: quotationInclude,
 
     orderBy: {
       createdAt: "desc",
@@ -117,26 +112,17 @@ const getAllQuotation = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, quotations, "Quotation fetched successfully"));
 });
 
-const getQuotationById = asyncHandler(async (req, res) => {
+const getQuotationById = asyncHandler<QuotationParams>(async (req, res) => {
   const { quotationId } = req.params;
-  const userId = req.user.id;
+  const userId = getAuthUser(req).id;
 
   const quotation = await prisma.quotation.findUnique({
     where: {
       id: Number(quotationId),
-      createdById: userId
+      createdById: userId,
     },
 
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-      items: true,
-    },
+    include: quotationInclude,
   });
 
   if (!quotation) {
@@ -148,105 +134,89 @@ const getQuotationById = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, quotation, "Quotation fetched successfully"));
 });
 
-const updateQuotation = asyncHandler(async (req, res) => {
-  const { quotationId } = req.params;
-  const userId = req.user.id;
+const updateQuotation = asyncHandler<QuotationParams, QuotationBody>(
+  async (req, res) => {
+    const { quotationId } = req.params;
+    const userId = getAuthUser(req).id;
 
-  const {
-    quotationNo,
-    date,
-    clientName,
-    projectName,
-    address,
-    instructions,
-    quotation,
-    subtotal,
-    taxRate,
-    taxAmount,
-    discount,
-    grandTotal,
-    status,
-  } = req.body;
-
-  const existingQuotation = await prisma.quotation.findUnique({
-    where: {
-      id: Number(quotationId),
-      createdById: userId,
-    },
-  });
-
-  if (!existingQuotation) {
-    throw new ApiError(404, "Quotation not found");
-  }
-
-  const updatedQuotation = await prisma.quotation.update({
-    where: {
-      id: Number(quotationId),
-    },
-
-    data: {
+    const {
       quotationNo,
-      date: date ? new Date(date) : undefined,
+      date,
       clientName,
       projectName,
       address,
       instructions,
-
-      subtotal: Number(subtotal),
-      taxRate: Number(taxRate) || 0,
-      taxAmount: Number(taxAmount) || 0,
-      discount: Number(discount) || 0,
-      grandTotal: Number(grandTotal),
-
+      quotation,
+      subtotal,
+      taxRate,
+      taxAmount,
+      discount,
+      grandTotal,
       status,
+    } = req.body;
 
-      items: {
-        deleteMany: {},
-
-        create: quotation.map((item) => ({
-          description: item.description,
-
-          unit: {
-            connect: {
-              id: Number(item.unitId),
-            },
-          },
-
-          quantity: Number(item.quantity),
-          price: Number(item.price),
-          taxRate: Number(item.taxRate) || 0,
-          total: Number(item.total),
-        })),
+    const existingQuotation = await prisma.quotation.findUnique({
+      where: {
+        id: Number(quotationId),
+        createdById: userId,
       },
-    },
+    });
 
-    include: {
-      createdBy: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
+    if (!existingQuotation) {
+      throw new ApiError(404, "Quotation not found");
+    }
+
+    const updatedQuotation = await prisma.quotation.update({
+      where: {
+        id: Number(quotationId),
+      },
+
+      data: {
+        quotationNo,
+        date: date ? new Date(date) : undefined,
+        clientName,
+        projectName,
+        address,
+        instructions,
+
+        subtotal: Number(subtotal),
+        taxRate: Number(taxRate) || 0,
+        taxAmount: Number(taxAmount) || 0,
+        discount: Number(discount) || 0,
+        grandTotal: Number(grandTotal),
+
+        status,
+
+        items: {
+          deleteMany: {},
+
+          create: quotation.map(toLineItemCreate),
         },
       },
-      items: true,
-    },
-  });
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, updatedQuotation, "Quotation updated successfully"),
-    );
-});
+      include: quotationInclude,
+    });
 
-const deleteQuotation = asyncHandler(async (req, res) => {
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          updatedQuotation,
+          "Quotation updated successfully",
+        ),
+      );
+  },
+);
+
+const deleteQuotation = asyncHandler<QuotationParams>(async (req, res) => {
   const { quotationId } = req.params;
-  const userId = req.user.id;
+  const userId = getAuthUser(req).id;
 
   const quotation = await prisma.quotation.findUnique({
     where: {
       id: Number(quotationId),
-      createdById: userId
+      createdById: userId,
     },
   });
 

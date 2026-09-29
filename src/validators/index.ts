@@ -1,6 +1,6 @@
-import { body } from "express-validator";
+import { body, type ValidationChain } from "express-validator";
 
-const userRegisterValidator = () => {
+const userRegisterValidator = (): ValidationChain[] => {
   return [
     // Personal Information
     body("name")
@@ -71,7 +71,7 @@ const userRegisterValidator = () => {
   ];
 };
 
-const userLoginValidator = () => {
+const userLoginValidator = (): ValidationChain[] => {
   return [
     body("email")
       .notEmpty()

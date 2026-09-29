@@ -1,8 +1,14 @@
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import { PrismaClient, type Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-async function main() {
+type CategorySeed = Pick<
+  Prisma.CategoryCreateInput,
+  "name" | "code" | "description"
+>;
+
+async function main(): Promise<void> {
   // Find the first user (Admin)
   const user = await prisma.user.findFirst();
 
@@ -12,7 +18,7 @@ async function main() {
     );
   }
 
-  const categories = [
+  const categories: CategorySeed[] = [
     {
       name: "Civil Work",
       code: "CIVIL",

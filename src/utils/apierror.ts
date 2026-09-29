@@ -1,6 +1,15 @@
 class ApiError extends Error {
+  public readonly code: number;
+  public readonly data: unknown[];
+  public readonly success: false;
+  public readonly errors: unknown[];
 
-  constructor(code, message = "Something went wrong", errors = [], stack = "") {
+  constructor(
+    code: number,
+    message = "Something went wrong",
+    errors: unknown[] = [],
+    stack = "",
+  ) {
     super(message);
 
     this.code = code;
@@ -17,4 +26,4 @@ class ApiError extends Error {
   }
 }
 
-export { ApiError }
+export { ApiError };

@@ -1,13 +1,60 @@
+import type { CookieOptions } from "express";
+import type { ParamsDictionary } from "express-serve-static-core";
+import type { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
+import type { UploadedFields } from "../middleware/multer.middleware.js";
+import type {
+  LoginBody,
+  RefreshTokenBody,
+  RegisterUserBody,
+  UpdateProfileBody,
+} from "../types/api.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 import { ApiError } from "../utils/apierror.js";
 import { asyncHandler } from "../utils/asynchandler.js";
-import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
+import { getAuthUser } from "../utils/auth.js";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 
-const generateAccessAndRefreshToken = async (userId) => {
+const cookieOptions: CookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === "production",
+};
+
+const userProfileSelect = {
+  id: true,
+  name: true,
+  email: true,
+
+  companyName: true,
+  mobileNumber: true,
+  alternateMobile: true,
+
+  website: true,
+  gstNumber: true,
+  panNumber: true,
+
+  services: true,
+  address: true,
+
+  logo: true,
+  signature: true,
+
+  role: true,
+
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.UserSelect;
+
+const generateAccessAndRefreshToken = async (
+  userId: number,
+): Promise<{ accessToken: string; refreshToken: string }> => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -38,71 +85,12 @@ const generateAccessAndRefreshToken = async (userId) => {
   }
 };
 
-const registerUser = asyncHandler(async (req, res) => {
-  const {
-    name,
-    email,
-    password,
-    companyName,
-    mobileNumber,
-    alternateMobile,
-    website,
-    gstNumber,
-    panNumber,
-    services,
-    address,
-  } = req.body;
-
-  const normalizedEmail = email.toLowerCase().trim();
-
-  // Check existing user
-  const existingUser = await prisma.user.findUnique({
-    where: {
-      email: normalizedEmail,
-    },
-  });
-
-  if (existingUser) {
-    throw new ApiError(409, "User already exists");
-  }
-
-  // Files uploaded by multer
-  const logoFile = req.files?.logo?.[0];
-  const signatureFile = req.files?.signature?.[0];
-
-  let logoUrl = null;
-  let signatureUrl = null;
-
-  // Upload logo
-  if (logoFile) {
-    const result = await uploadToCloudinary(
-      logoFile.buffer,
-      "quickquote/users/logos",
-    );
-
-    logoUrl = result.secure_url;
-  }
-
-  // Upload signature
-  if (signatureFile) {
-    const result = await uploadToCloudinary(
-      signatureFile.buffer,
-      "quickquote/users/signatures",
-    );
-
-    signatureUrl = result.secure_url;
-  }
-
-  // Hash password
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  // Create user
-  const user = await prisma.user.create({
-    data: {
-      name: name.trim(),
-      email: normalizedEmail,
-      password: hashedPassword,
-
+const registerUser = asyncHandler<ParamsDictionary, RegisterUserBody>(
+  async (req, res) => {
+    const {
+      name,
+      email,
+      password,
       companyName,
       mobileNumber,
       alternateMobile,
@@ -111,47 +99,85 @@ const registerUser = asyncHandler(async (req, res) => {
       panNumber,
       services,
       address,
+    } = req.body;
 
-      logo: logoUrl,
-      signature: signatureUrl,
-    },
+    const normalizedEmail = email.toLowerCase().trim();
 
-    select: {
-      id: true,
-      name: true,
-      email: true,
+    // Check existing user
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email: normalizedEmail,
+      },
+    });
 
-      companyName: true,
-      mobileNumber: true,
-      alternateMobile: true,
+    if (existingUser) {
+      throw new ApiError(409, "User already exists");
+    }
 
-      website: true,
-      gstNumber: true,
-      panNumber: true,
+    // Files uploaded by multer
+    const files = req.files as UploadedFields | undefined;
+    const logoFile = files?.logo?.[0];
+    const signatureFile = files?.signature?.[0];
 
-      services: true,
-      address: true,
+    let logoUrl: string | null = null;
+    let signatureUrl: string | null = null;
 
-      logo: true,
-      signature: true,
+    // Upload logo
+    if (logoFile) {
+      const result = await uploadToCloudinary(
+        logoFile.buffer,
+        "quickquote/users/logos",
+      );
 
-      role: true,
-      createdAt: true,
-    },
-  });
+      logoUrl = result.secure_url;
+    }
 
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(
-        201,
-        user,
-        "User registered successfully"
-      )
-    );
-});
+    // Upload signature
+    if (signatureFile) {
+      const result = await uploadToCloudinary(
+        signatureFile.buffer,
+        "quickquote/users/signatures",
+      );
 
-const login = asyncHandler(async (req, res) => {
+      signatureUrl = result.secure_url;
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: normalizedEmail,
+        password: hashedPassword,
+
+        companyName,
+        mobileNumber,
+        alternateMobile,
+        website,
+        gstNumber,
+        panNumber,
+        services,
+        address,
+
+        logo: logoUrl,
+        signature: signatureUrl,
+      },
+
+      select: {
+        ...userProfileSelect,
+        updatedAt: false,
+      },
+    });
+
+    return res
+      .status(201)
+      .json(new ApiResponse(201, user, "User registered successfully"));
+  },
+);
+
+const login = asyncHandler<ParamsDictionary, LoginBody>(async (req, res) => {
   const { email, password } = req.body;
 
   // Find user by email
@@ -188,15 +214,10 @@ const login = asyncHandler(async (req, res) => {
     },
   });
 
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-  };
-
   return res
     .status(200)
-    .cookie("accessToken", accessToken, options)
-    .cookie("refreshToken", refreshToken, options)
+    .cookie("accessToken", accessToken, cookieOptions)
+    .cookie("refreshToken", refreshToken, cookieOptions)
     .json(
       new ApiResponse(
         200,
@@ -211,57 +232,33 @@ const login = asyncHandler(async (req, res) => {
 });
 
 const logout = asyncHandler(async (req, res) => {
+  const authUser = getAuthUser(req);
+
   await prisma.user.update({
     where: {
-      id: req.user.id,
+      id: authUser.id,
     },
     data: {
       refreshToken: null,
     },
   });
 
-  const options = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-  };
-
   return res
     .status(200)
-    .clearCookie("accessToken", options)
-    .clearCookie("refreshToken", options)
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
     .json(new ApiResponse(200, {}, "User logged out"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
+  const authUser = getAuthUser(req);
+
   const user = await prisma.user.findUnique({
     where: {
-      id: req.user.id,
+      id: authUser.id,
     },
 
-    select: {
-      id: true,
-      name: true,
-      email: true,
-
-      companyName: true,
-      mobileNumber: true,
-      alternateMobile: true,
-
-      website: true,
-      gstNumber: true,
-      panNumber: true,
-
-      services: true,
-      address: true,
-
-      logo: true,
-      signature: true,
-
-      role: true,
-
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: userProfileSelect,
   });
 
   if (!user) {
@@ -273,134 +270,110 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Current user fetched successfully."));
 });
 
-const refreshAccessToken = asyncHandler(async (req, res) => {
-  const incomingRefreshToken =
-    req.cookies.refreshToken || req.body.refreshToken;
+const refreshAccessToken = asyncHandler<ParamsDictionary, RefreshTokenBody>(
+  async (req, res) => {
+    const incomingRefreshToken: string | undefined =
+      req.cookies.refreshToken || req.body?.refreshToken;
 
-  if (!incomingRefreshToken) {
-    throw new ApiError(401, "Unauthorized access");
-  }
+    if (!incomingRefreshToken) {
+      throw new ApiError(401, "Unauthorized access");
+    }
 
-  try {
-    const decodedToken = jwt.verify(
-      incomingRefreshToken,
-      process.env.REFRESH_TOKEN_SECRET,
-    );
+    try {
+      const decodedToken = verifyRefreshToken(incomingRefreshToken);
+
+      const user = await prisma.user.findUnique({
+        where: {
+          id: decodedToken.id,
+        },
+      });
+
+      if (!user) {
+        throw new ApiError(401, "Invalid refresh token");
+      }
+
+      if (incomingRefreshToken !== user.refreshToken) {
+        throw new ApiError(401, "Refresh token is expired");
+      }
+
+      const { accessToken, refreshToken: newRefreshToken } =
+        await generateAccessAndRefreshToken(user.id);
+
+      return res
+        .status(200)
+        .cookie("accessToken", accessToken, cookieOptions)
+        .cookie("refreshToken", newRefreshToken, cookieOptions)
+        .json(
+          new ApiResponse(
+            200,
+            {
+              accessToken,
+              refreshToken: newRefreshToken,
+            },
+            "Access token refreshed",
+          ),
+        );
+    } catch (error) {
+      throw new ApiError(401, "Invalid refresh token");
+    }
+  },
+);
+
+const updateProfile = asyncHandler<ParamsDictionary, UpdateProfileBody>(
+  async (req, res) => {
+    const authUser = getAuthUser(req);
+
+    const {
+      name,
+      companyName,
+      mobileNumber,
+      alternateMobile,
+      website,
+      gstNumber,
+      panNumber,
+      services,
+      address,
+      logo,
+      signature,
+    } = req.body;
 
     const user = await prisma.user.findUnique({
       where: {
-        id: decodedToken.id,
+        id: authUser.id,
       },
     });
 
     if (!user) {
-      throw new ApiError(401, "Invalid refresh token");
+      throw new ApiError(404, "User not found.");
     }
 
-    if (incomingRefreshToken !== user.refreshToken) {
-      throw new ApiError(401, "Refresh token is expired");
-    }
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: authUser.id,
+      },
 
-    const { accessToken, refreshToken: newRefreshToken } =
-      await generateAccessAndRefreshToken(user.id);
+      data: {
+        ...(name !== undefined && { name }),
+        ...(companyName !== undefined && { companyName }),
+        ...(mobileNumber !== undefined && { mobileNumber }),
+        ...(alternateMobile !== undefined && { alternateMobile }),
+        ...(website !== undefined && { website }),
+        ...(gstNumber !== undefined && { gstNumber }),
+        ...(panNumber !== undefined && { panNumber }),
+        ...(services !== undefined && { services }),
+        ...(address !== undefined && { address }),
+        ...(logo !== undefined && { logo }),
+        ...(signature !== undefined && { signature }),
+      },
 
-    const options = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-    };
+      select: userProfileSelect,
+    });
 
     return res
       .status(200)
-      .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
-      .json(
-        new ApiResponse(
-          200,
-          {
-            accessToken,
-            refreshToken: newRefreshToken,
-          },
-          "Access token refreshed",
-        ),
-      );
-  } catch (error) {
-    throw new ApiError(401, "Invalid refresh token");
-  }
-});
-
-const updateProfile = asyncHandler(async (req, res) => {
-  const {
-    name,
-    companyName,
-    mobileNumber,
-    alternateMobile,
-    website,
-    gstNumber,
-    panNumber,
-    services,
-    address,
-    logo,
-    signature,
-  } = req.body;
-
-  const user = await prisma.user.findUnique({
-    where: {
-      id: req.user.id,
-    },
-  });
-
-  if (!user) {
-    throw new ApiError(404, "User not found.");
-  }
-
-  const updatedUser = await prisma.user.update({
-    where: {
-      id: req.user.id,
-    },
-
-    data: {
-      ...(name !== undefined && { name }),
-      ...(companyName !== undefined && { companyName }),
-      ...(mobileNumber !== undefined && { mobileNumber }),
-      ...(alternateMobile !== undefined && { alternateMobile }),
-      ...(website !== undefined && { website }),
-      ...(gstNumber !== undefined && { gstNumber }),
-      ...(panNumber !== undefined && { panNumber }),
-      ...(services !== undefined && { services }),
-      ...(address !== undefined && { address }),
-      ...(logo !== undefined && { logo }),
-      ...(signature !== undefined && { signature }),
-    },
-
-    select: {
-      id: true,
-      name: true,
-      email: true,
-
-      companyName: true,
-      mobileNumber: true,
-      alternateMobile: true,
-
-      website: true,
-      gstNumber: true,
-      panNumber: true,
-
-      services: true,
-      address: true,
-
-      logo: true,
-      signature: true,
-
-      role: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, updatedUser, "Profile updated successfully."));
-});
+      .json(new ApiResponse(200, updatedUser, "Profile updated successfully."));
+  },
+);
 
 export {
   registerUser,

@@ -1,18 +1,25 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "",
+  "main": "dist/index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx prisma/category.ts",
+    "format": "prettier --write .",
     "postinstall": "prisma generate",
     "migrate": "prisma migrate deploy"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@google/genai": "^2.10.0",
     "@prisma/client": "^6.19.3",
@@ -28,8 +35,15 @@
     "prisma": "^6.19.3"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.3.0",
     "@types/node": "^24.10.1",
-    "nodemon": "^3.1.11",
-    "prettier": "3.7.1"
+    "prettier": "3.7.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }

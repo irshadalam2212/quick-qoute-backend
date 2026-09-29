@@ -1,10 +1,10 @@
 import prisma from "../lib/prisma.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiError } from "../utils/apierror.js";
-import jwt from "jsonwebtoken";
+import { verifyAccessToken } from "../utils/jwt.js";
 
-export const verifyJWT = asyncHandler(async (req, res, next) => {
-  const token =
+export const verifyJWT = asyncHandler(async (req, _res, next) => {
+  const token: string | undefined =
     req.cookies?.accessToken ||
     req.header("Authorization")?.replace("Bearer ", "");
 
@@ -13,10 +13,7 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    const decodedToken = jwt.verify(
-      token,
-      process.env.ACCESS_TOKEN_SECRET
-    );
+    const decodedToken = verifyAccessToken(token);
 
     const user = await prisma.user.findUnique({
       where: {
