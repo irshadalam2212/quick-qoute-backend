@@ -270,6 +270,33 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Current user fetched successfully."));
 });
 
+const getUsers = asyncHandler(async (req, res) => {
+  const authUser = getAuthUser(req);
+
+  if (authUser.role !== "USER") {
+    throw new ApiError(403, "You are not allowed to view users.");
+  }
+
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      companyName: true,
+      mobileNumber: true,
+      alternateMobile: true,
+      logo: true,
+      role: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, users, "Users fetched successfully."));
+});
+
 const refreshAccessToken = asyncHandler<ParamsDictionary, RefreshTokenBody>(
   async (req, res) => {
     const incomingRefreshToken: string | undefined =
@@ -380,6 +407,7 @@ export {
   login,
   logout,
   getCurrentUser,
+  getUsers,
   refreshAccessToken,
   updateProfile,
 };
