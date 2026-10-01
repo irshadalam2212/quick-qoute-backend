@@ -16,6 +16,16 @@ const invoiceInclude = {
       id: true,
       name: true,
       email: true,
+      companyName: true,
+      mobileNumber: true,
+      alternateMobile: true,
+      website: true,
+      gstNumber: true,
+      panNumber: true,
+      services: true,
+      address: true,
+      logo: true,
+      signature: true,
     },
   },
 
@@ -26,7 +36,9 @@ const invoiceInclude = {
     },
   },
 
-  items: true,
+  items: {
+    include: { unit: { select: { id: true, name: true, shortName: true } } },
+  },
 } satisfies Prisma.InvoiceInclude;
 
 const createInvoice = asyncHandler<ParamsDictionary, InvoiceBody>(
