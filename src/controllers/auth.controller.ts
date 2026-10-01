@@ -1,6 +1,7 @@
 import type { CookieOptions } from "express";
 import type { ParamsDictionary } from "express-serve-static-core";
 import type { Prisma } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 import prisma from "../lib/prisma.js";
 import bcrypt from "bcrypt";
 import { env } from "../config/env.js";
@@ -52,6 +53,12 @@ const userProfileSelect = {
   updatedAt: true,
 } satisfies Prisma.UserSelect;
 
+const GUEST_ACCOUNT_EMAIL = "guest@quickquote.local";
+let guestPasswordHashPromise: Promise<string> | undefined;
+
+const getGuestPasswordHash = () =>
+  (guestPasswordHashPromise ??= bcrypt.hash(randomBytes(32).toString("hex"), 10));
+
 const generateAccessAndRefreshToken = async (
   userId: number,
 ): Promise<{ accessToken: string; refreshToken: string }> => {
@@ -102,6 +109,10 @@ const registerUser = asyncHandler<ParamsDictionary, RegisterUserBody>(
     } = req.body;
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    if (normalizedEmail === GUEST_ACCOUNT_EMAIL) {
+      throw new ApiError(409, "This email address is reserved.");
+    }
 
     // Check existing user
     const existingUser = await prisma.user.findUnique({
@@ -231,6 +242,42 @@ const login = asyncHandler<ParamsDictionary, LoginBody>(async (req, res) => {
     );
 });
 
+const guestLogin = asyncHandler(async (_req, res) => {
+  const passwordHash = await getGuestPasswordHash();
+
+  const guest = await prisma.user.upsert({
+    where: { email: GUEST_ACCOUNT_EMAIL },
+    update: {},
+    create: {
+      email: GUEST_ACCOUNT_EMAIL,
+      name: "Guest User",
+      password: passwordHash,
+      role: "GUEST",
+      companyName: "QuickQuote Demo",
+      services: "Construction and interior work",
+    },
+    select: userProfileSelect,
+  });
+
+  if (guest.role !== "GUEST") {
+    throw new ApiError(409, "The configured guest account is unavailable.");
+  }
+
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(guest.id);
+
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, cookieOptions)
+    .cookie("refreshToken", refreshToken, cookieOptions)
+    .json(
+      new ApiResponse(
+        200,
+        { user: guest, accessToken, refreshToken },
+        "Guest session started successfully.",
+      ),
+    );
+});
+
 const logout = asyncHandler(async (req, res) => {
   const authUser = getAuthUser(req);
 
@@ -273,7 +320,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 const getUsers = asyncHandler(async (req, res) => {
   const authUser = getAuthUser(req);
 
-  if (authUser.role !== "USER") {
+  if (authUser.role !== "ADMIN") {
     throw new ApiError(403, "You are not allowed to view users.");
   }
 
@@ -405,6 +452,7 @@ const updateProfile = asyncHandler<ParamsDictionary, UpdateProfileBody>(
 export {
   registerUser,
   login,
+  guestLogin,
   logout,
   getCurrentUser,
   getUsers,

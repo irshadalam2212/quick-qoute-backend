@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getCurrentUser,
   getUsers,
+  guestLogin,
   login,
   logout,
   refreshAccessToken,
@@ -37,6 +38,7 @@ router
     registerUser
   );
 router.route("/login").post(userLoginValidator(), validate, login);
+router.route("/guest-login").post(guestLogin);
 router.route("/refresh-token").post(refreshAccessToken);
 
 //secure routes
