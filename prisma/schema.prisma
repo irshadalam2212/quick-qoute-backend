@@ -117,7 +117,7 @@ model Invoice {
 
 model InvoiceItem {
   id          Int     @id @default(autoincrement())
-  description String
+  description String  @db.Text
   quantity    Int
   price       Float
   taxRate     Float   @default(0)
