@@ -25,9 +25,32 @@ const createQuotation = asyncHandler<ParamsDictionary, QuotationBody>(
   async (req, res) => {
     const authUser = getAuthUser(req);
 
+    const user = await prisma.user.findUnique({
+      where: { id: authUser.id },
+      select: { companyName: true },
+    });
+
+    if (!user) {
+      throw new ApiError(404, "User not found.");
+    }
+
+    const companyInitials = (user.companyName ?? "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .replace(/[^a-z0-9]/gi, "")
+      .toUpperCase();
+
+    if (!companyInitials) {
+      throw new ApiError(400, "Add a company name to your profile first.");
+    }
+
+    const year = new Date().getFullYear();
+    const quotationPrefix = `${companyInitials}-${year}-`;
+
     const {
-      quotationNo,
-      date,
       clientName,
       projectName,
       address,
@@ -41,47 +64,72 @@ const createQuotation = asyncHandler<ParamsDictionary, QuotationBody>(
     } = req.body;
 
     if (
-      !quotationNo ||
       !address ||
       !Array.isArray(quotation) ||
       quotation.length === 0
     ) {
       throw new ApiError(
         400,
-        "Quotation number, address and quotation items are required.",
+        "Address and quotation items are required.",
       );
     }
 
-    const newQuotation = await prisma.quotation.create({
-      data: {
-        quotationNo,
-        date: date ? new Date(date) : new Date(),
-        clientName,
-        projectName,
-        address,
-        instructions,
+    let newQuotation: Awaited<ReturnType<typeof prisma.quotation.create>>;
+    for (let attempt = 0; ; attempt += 1) {
+      const existingNumbers = await prisma.quotation.findMany({
+        where: { quotationNo: { startsWith: quotationPrefix } },
+        select: { quotationNo: true },
+      });
+      const highestSerial = existingNumbers.reduce((highest, item) => {
+        const serial = Number(item.quotationNo.match(/-(\d+)$/)?.[1] ?? 0);
+        return Math.max(highest, serial);
+      }, 0);
+      const nextSerial = highestSerial + 1;
+      const quotationNo = `${quotationPrefix}${String(nextSerial).padStart(3, "0")}`;
 
-        subtotal,
-        taxRate: taxRate || 0,
-        taxAmount: taxAmount || 0,
-        discount: discount || 0,
-        grandTotal,
+      try {
+        newQuotation = await prisma.quotation.create({
+          data: {
+            quotationNo,
+            date: new Date(),
+            clientName,
+            projectName,
+            address,
+            instructions,
 
-        status: "DRAFT",
+            subtotal,
+            taxRate: taxRate || 0,
+            taxAmount: taxAmount || 0,
+            discount: discount || 0,
+            grandTotal,
 
-        createdBy: {
-          connect: {
-            id: authUser.id,
+            status: "DRAFT",
+
+            createdBy: {
+              connect: {
+                id: authUser.id,
+              },
+            },
+
+            items: {
+              create: quotation.map(toLineItemCreate),
+            },
           },
-        },
 
-        items: {
-          create: quotation.map(toLineItemCreate),
-        },
-      },
-
-      include: quotationInclude,
-    });
+          include: quotationInclude,
+        });
+        break;
+      } catch (error) {
+        const isUniqueConflict =
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "P2002";
+        if (!isUniqueConflict || attempt >= 9) {
+          throw error;
+        }
+      }
+    }
 
     return res
       .status(201)

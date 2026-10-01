@@ -72,7 +72,7 @@ export interface ItemBody {
 }
 
 export interface QuotationBody {
-  quotationNo: string;
+  quotationNo?: string;
   date?: string;
   clientName?: string;
   projectName?: string;
