@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { getDashboardMetrics } from "../controllers/dashboard.controller.js";
-import { requireFeature, verifyJWT } from "../middleware/auth.middleware.js";
+import { verifyJWT } from "../middleware/auth.middleware.js";
 
 const router = Router()
 
- router.route("/metrics").get(verifyJWT, requireFeature("DASHBOARD"), getDashboardMetrics)
+ router.route("/metrics").get(verifyJWT, getDashboardMetrics)
 
 export default router

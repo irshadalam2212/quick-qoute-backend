@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireFeature, verifyJWT } from "../middleware/auth.middleware.js";
+import { verifyJWT } from "../middleware/auth.middleware.js";
 import {
   createInvoice,
   deleteInvoice,
@@ -10,10 +10,10 @@ import {
 
 const router = Router();
 
-router.route("/").post(verifyJWT, requireFeature("INVOICES"), createInvoice);
-router.route("/").get(verifyJWT, requireFeature("INVOICES"), getAllInvoices);
-router.route("/:invoiceId").get(verifyJWT, requireFeature("INVOICES"), getInvoiceById);
-router.route("/:invoiceId").put(verifyJWT, requireFeature("INVOICES"), updateInvoice);
-router.route("/:invoiceId").delete(verifyJWT, requireFeature("INVOICES"), deleteInvoice);
+router.route("/").post(verifyJWT, createInvoice);
+router.route("/").get(verifyJWT, getAllInvoices);
+router.route("/:invoiceId").get(verifyJWT, getInvoiceById);
+router.route("/:invoiceId").put(verifyJWT, updateInvoice);
+router.route("/:invoiceId").delete(verifyJWT, deleteInvoice);
 
 export default router;

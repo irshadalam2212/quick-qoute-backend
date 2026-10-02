@@ -1,7 +1,6 @@
 import { Router } from "express";
 import {
   getCurrentUser,
-  getAvailableFeatures,
   getUsers,
   guestLogin,
   login,
@@ -9,7 +8,6 @@ import {
   refreshAccessToken,
   registerUser,
   updateProfile,
-  updateUserPermissions,
 } from "../controllers/auth.controller.js";
 import { validate } from "../middleware/validator.middleware.js";
 import {
@@ -17,7 +15,7 @@ import {
   userRegisterValidator,
   userLoginValidator,
 } from "../validators/index.js";
-import { requireFeature, verifyJWT } from "../middleware/auth.middleware.js";
+import { verifyJWT } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/multer.middleware.js";
 
 const router = Router();
@@ -47,9 +45,7 @@ router.route("/refresh-token").post(refreshAccessToken);
 //secure routes
 router.route("/logout").post(verifyJWT, logout);
 router.route("/profile").get(verifyJWT, getCurrentUser);
-router.route("/users").get(verifyJWT, requireFeature("USERS"), getUsers);
-router.route("/features").get(verifyJWT, getAvailableFeatures);
-router.route("/users/:userId/permissions").put(verifyJWT, updateUserPermissions);
+router.route("/users").get(verifyJWT, getUsers);
 router
   .route("/update-profile")
   .put(
