@@ -30,6 +30,18 @@ model User {
   invoices        Invoice[]
   items           Item[]      @relation("UserItems")
   quotations      Quotation[]
+  featurePermissions UserFeaturePermission[]
+}
+
+model UserFeaturePermission {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  feature   String   @db.VarChar(64)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, feature])
+  @@index([feature])
 }
 
 model Quotation {

@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { verifyJWT } from "../middleware/auth.middleware.js"
+import { requireFeature, verifyJWT } from "../middleware/auth.middleware.js"
 import {
     createQuotation,
     getAllQuotation,
@@ -10,10 +10,10 @@ import {
 
 const router = Router()
 
-router.route("/").post(verifyJWT, createQuotation)
-router.route("/").get(verifyJWT, getAllQuotation)
-router.route("/:quotationId").get(verifyJWT, getQuotationById)
-router.route("/:quotationId").put(verifyJWT, updateQuotation)
-router.route("/:quotationId").delete(verifyJWT, deleteQuotation)
+router.route("/").post(verifyJWT, requireFeature("QUOTATIONS"), createQuotation)
+router.route("/").get(verifyJWT, requireFeature("QUOTATIONS"), getAllQuotation)
+router.route("/:quotationId").get(verifyJWT, requireFeature("QUOTATIONS"), getQuotationById)
+router.route("/:quotationId").put(verifyJWT, requireFeature("QUOTATIONS"), updateQuotation)
+router.route("/:quotationId").delete(verifyJWT, requireFeature("QUOTATIONS"), deleteQuotation)
 
 export default router

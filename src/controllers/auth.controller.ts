@@ -22,6 +22,7 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { APP_FEATURES, DEFAULT_USER_FEATURES, isAppFeature } from "../utils/permissions.js";
 
 const cookieOptions: CookieOptions = {
   httpOnly: true,
@@ -51,6 +52,7 @@ const userProfileSelect = {
 
   createdAt: true,
   updatedAt: true,
+  featurePermissions: { select: { feature: true } },
 } satisfies Prisma.UserSelect;
 
 const GUEST_ACCOUNT_EMAIL = "guest@quickquote.local";
@@ -174,6 +176,9 @@ const registerUser = asyncHandler<ParamsDictionary, RegisterUserBody>(
 
         logo: logoUrl,
         signature: signatureUrl,
+        featurePermissions: {
+          create: DEFAULT_USER_FEATURES.map((feature) => ({ feature })),
+        },
       },
 
       select: {
@@ -216,13 +221,8 @@ const login = asyncHandler<ParamsDictionary, LoginBody>(async (req, res) => {
 
   // Get user without sensitive fields
   const loggedInUser = await prisma.user.findUnique({
-    where: {
-      id: user.id,
-    },
-    omit: {
-      password: true,
-      refreshToken: true,
-    },
+    where: { id: user.id },
+    select: userProfileSelect,
   });
 
   return res
@@ -255,6 +255,9 @@ const guestLogin = asyncHandler(async (_req, res) => {
       role: "GUEST",
       companyName: "QuickQuote Demo",
       services: "Construction and interior work",
+      featurePermissions: {
+        create: DEFAULT_USER_FEATURES.map((feature) => ({ feature })),
+      },
     },
     select: userProfileSelect,
   });
@@ -312,18 +315,19 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found.");
   }
 
+  const userWithEffectiveFeatures = {
+    ...user,
+    featurePermissions: user.role === "ADMIN"
+      ? APP_FEATURES.map((feature) => ({ feature }))
+      : user.featurePermissions,
+  };
+
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Current user fetched successfully."));
+    .json(new ApiResponse(200, userWithEffectiveFeatures, "Current user fetched successfully."));
 });
 
 const getUsers = asyncHandler(async (req, res) => {
-  const authUser = getAuthUser(req);
-
-  if (authUser.role !== "ADMIN") {
-    throw new ApiError(403, "You are not allowed to view users.");
-  }
-
   const users = await prisma.user.findMany({
     select: {
       id: true,
@@ -335,13 +339,75 @@ const getUsers = asyncHandler(async (req, res) => {
       logo: true,
       role: true,
       createdAt: true,
+      featurePermissions: { select: { feature: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 
+  const usersWithEffectiveFeatures = users.map((user) => ({
+    ...user,
+    featurePermissions: user.role === "ADMIN"
+      ? APP_FEATURES.map((feature) => ({ feature }))
+      : user.featurePermissions,
+  }));
+
   return res
     .status(200)
-    .json(new ApiResponse(200, users, "Users fetched successfully."));
+    .json(new ApiResponse(200, usersWithEffectiveFeatures, "Users fetched successfully."));
+});
+
+const getAvailableFeatures = asyncHandler(async (req, res) => {
+  const authUser = getAuthUser(req);
+  if (authUser.role !== "ADMIN") {
+    throw new ApiError(403, "Only admins can manage feature access.");
+  }
+
+  const features = APP_FEATURES.map((key) => ({
+    key,
+    defaultEnabled: DEFAULT_USER_FEATURES.includes(key),
+  }));
+
+  return res.status(200).json(new ApiResponse(200, features, "Features fetched successfully."));
+});
+
+const updateUserPermissions = asyncHandler(async (req, res) => {
+  const authUser = getAuthUser(req);
+  const userId = Number(req.params.userId);
+  const { features } = req.body as { features?: unknown };
+
+  if (authUser.role !== "ADMIN") {
+    throw new ApiError(403, "Only admins can manage feature access.");
+  }
+  if (!Number.isInteger(userId) || userId < 1) {
+    throw new ApiError(400, "Invalid user ID.");
+  }
+  if (!Array.isArray(features) || !features.every(isAppFeature)) {
+    throw new ApiError(400, `Features must be an array containing only: ${APP_FEATURES.join(", ")}.`);
+  }
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true },
+  });
+  if (!target) {
+    throw new ApiError(404, "User not found.");
+  }
+  if (target.role === "ADMIN") {
+    throw new ApiError(400, "Admin feature access is always enabled and cannot be changed.");
+  }
+
+  const uniqueFeatures = [...new Set(features)];
+  await prisma.$transaction([
+    prisma.userFeaturePermission.deleteMany({ where: { userId } }),
+    ...(uniqueFeatures.length
+      ? [prisma.userFeaturePermission.createMany({ data: uniqueFeatures.map((feature) => ({ userId, feature })) })]
+      : []),
+  ]);
+
+  return res.status(200).json(new ApiResponse(200, {
+    userId,
+    features: uniqueFeatures,
+  }, "Feature access updated successfully."));
 });
 
 const refreshAccessToken = asyncHandler<ParamsDictionary, RefreshTokenBody>(
@@ -470,6 +536,8 @@ export {
   logout,
   getCurrentUser,
   getUsers,
+  getAvailableFeatures,
   refreshAccessToken,
   updateProfile,
+  updateUserPermissions,
 };
