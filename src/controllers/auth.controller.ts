@@ -407,9 +407,23 @@ const updateProfile = asyncHandler<ParamsDictionary, UpdateProfileBody>(
       panNumber,
       services,
       address,
-      logo,
-      signature,
     } = req.body;
+
+    const files = req.files as UploadedFields | undefined;
+    const logoFile = files?.logo?.[0];
+    const signatureFile = files?.signature?.[0];
+
+    const [uploadedLogo, uploadedSignature] = await Promise.all([
+      logoFile
+        ? uploadToCloudinary(logoFile.buffer, "quickquote/users/logos")
+        : undefined,
+      signatureFile
+        ? uploadToCloudinary(signatureFile.buffer, "quickquote/users/signatures")
+        : undefined,
+    ]);
+
+    const optionalText = (value: string | null | undefined) =>
+      value == null ? value : value.trim() || null;
 
     const user = await prisma.user.findUnique({
       where: {
@@ -427,17 +441,17 @@ const updateProfile = asyncHandler<ParamsDictionary, UpdateProfileBody>(
       },
 
       data: {
-        ...(name !== undefined && { name }),
-        ...(companyName !== undefined && { companyName }),
-        ...(mobileNumber !== undefined && { mobileNumber }),
-        ...(alternateMobile !== undefined && { alternateMobile }),
-        ...(website !== undefined && { website }),
-        ...(gstNumber !== undefined && { gstNumber }),
-        ...(panNumber !== undefined && { panNumber }),
-        ...(services !== undefined && { services }),
-        ...(address !== undefined && { address }),
-        ...(logo !== undefined && { logo }),
-        ...(signature !== undefined && { signature }),
+        ...(name !== undefined && { name: name.trim() }),
+        ...(companyName !== undefined && { companyName: optionalText(companyName) }),
+        ...(mobileNumber !== undefined && { mobileNumber: optionalText(mobileNumber) }),
+        ...(alternateMobile !== undefined && { alternateMobile: optionalText(alternateMobile) }),
+        ...(website !== undefined && { website: optionalText(website) }),
+        ...(gstNumber !== undefined && { gstNumber: optionalText(gstNumber) }),
+        ...(panNumber !== undefined && { panNumber: optionalText(panNumber) }),
+        ...(services !== undefined && { services: optionalText(services) }),
+        ...(address !== undefined && { address: optionalText(address) }),
+        ...(uploadedLogo && { logo: uploadedLogo.secure_url }),
+        ...(uploadedSignature && { signature: uploadedSignature.secure_url }),
       },
 
       select: userProfileSelect,

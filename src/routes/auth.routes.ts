@@ -11,6 +11,7 @@ import {
 } from "../controllers/auth.controller.js";
 import { validate } from "../middleware/validator.middleware.js";
 import {
+  profileUpdateValidator,
   userRegisterValidator,
   userLoginValidator,
 } from "../validators/index.js";
@@ -45,6 +46,17 @@ router.route("/refresh-token").post(refreshAccessToken);
 router.route("/logout").post(verifyJWT, logout);
 router.route("/profile").get(verifyJWT, getCurrentUser);
 router.route("/users").get(verifyJWT, getUsers);
-router.route("/update-profile").put(verifyJWT, updateProfile);
+router
+  .route("/update-profile")
+  .put(
+    verifyJWT,
+    upload.fields([
+      { name: "logo", maxCount: 1 },
+      { name: "signature", maxCount: 1 },
+    ]),
+    profileUpdateValidator(),
+    validate,
+    updateProfile,
+  );
 
 export default router;

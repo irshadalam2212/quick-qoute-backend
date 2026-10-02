@@ -82,4 +82,25 @@ const userLoginValidator = (): ValidationChain[] => {
   ];
 };
 
-export { userRegisterValidator, userLoginValidator };
+const profileUpdateValidator = (): ValidationChain[] => [
+  body("name")
+    .trim()
+    .notEmpty()
+    .withMessage("Name is required")
+    .isLength({ min: 2 })
+    .withMessage("Name must be at least 2 characters"),
+  body("companyName").optional({ values: "falsy" }).trim(),
+  body("mobileNumber").optional({ values: "falsy" }).trim(),
+  body("alternateMobile").optional({ values: "falsy" }).trim(),
+  body("website")
+    .optional({ values: "falsy" })
+    .trim()
+    .isURL()
+    .withMessage("Website URL is not valid"),
+  body("gstNumber").optional({ values: "falsy" }).trim(),
+  body("panNumber").optional({ values: "falsy" }).trim(),
+  body("services").optional({ values: "falsy" }).trim(),
+  body("address").optional({ values: "falsy" }).trim(),
+];
+
+export { userRegisterValidator, userLoginValidator, profileUpdateValidator };
