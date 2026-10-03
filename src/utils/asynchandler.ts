@@ -7,11 +7,14 @@ type AsyncRequestHandler<P, ReqBody> = (
   next: NextFunction,
 ) => Promise<unknown> | unknown;
 
+/** Forwards sync throws and rejected async handler promises to Express error middleware. */
 const asyncHandler = <P = ParamsDictionary, ReqBody = unknown>(
   requestHandler: AsyncRequestHandler<P, ReqBody>,
 ): RequestHandler<P, unknown, ReqBody> => {
   return (req, res, next) => {
-    Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
+    Promise.resolve()
+      .then(() => requestHandler(req, res, next))
+      .catch(next);
   };
 };
 

@@ -26,12 +26,12 @@ const fromPrismaError = (
 };
 
 const toApiError = (error: unknown): ApiError => {
-  if (error instanceof ApiError) {
-    return error;
-  }
+  if (error instanceof ApiError) return error;
 
   if (error instanceof multer.MulterError) {
-    return new ApiError(400, error.message);
+    const status = error.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+    const message = status === 413 ? "Uploaded file is too large." : error.message;
+    return new ApiError(status, message);
   }
 
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -39,18 +39,29 @@ const toApiError = (error: unknown): ApiError => {
   }
 
   if (error instanceof Prisma.PrismaClientValidationError) {
-    return new ApiError(400, "Received data is not valid");
+    return new ApiError(400, "Received data is not valid.");
   }
 
-  // body-parser errors (malformed JSON, payload too large) carry a 4xx status.
-  const status = (error as { status?: unknown } | null)?.status;
+  const candidate = error as {
+    status?: unknown;
+    statusCode?: unknown;
+    message?: unknown;
+  } | null;
+  const status = candidate?.status ?? candidate?.statusCode;
   if (typeof status === "number" && status >= 400 && status < 500) {
-    return new ApiError(status, (error as Error).message);
+    const message = typeof candidate?.message === "string"
+      ? candidate.message
+      : "The request could not be processed.";
+    return new ApiError(status, message);
   }
 
-  return new ApiError(500);
+  const message = env.NODE_ENV === "production"
+    ? "Internal server error. Please try again later."
+    : error instanceof Error && error.message
+      ? error.message
+      : "An unexpected error occurred.";
+  return new ApiError(500, message);
 };
-
 export const notFoundHandler: RequestHandler = (req, _res, next) => {
   next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`));
 };

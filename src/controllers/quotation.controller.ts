@@ -288,6 +288,20 @@ const deleteQuotation = asyncHandler<QuotationParams>(async (req, res) => {
     throw new ApiError(404, "Quotation not found");
   }
 
+  const linkedInvoice = await prisma.invoice.findFirst({
+    where: {
+      quotationId: Number(quotationId),
+      createdById: userId,
+    },
+    select: { id: true },
+  });
+
+  if (linkedInvoice) {
+    throw new ApiError(
+      409,
+      "This quotation can't be deleted because it has one or more invoices. Delete the invoice(s) first.",
+    );
+  }
   await prisma.quotation.delete({
     where: {
       id: Number(quotationId),
