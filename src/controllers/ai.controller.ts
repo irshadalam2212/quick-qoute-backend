@@ -1,5 +1,9 @@
 import type { ParamsDictionary } from "express-serve-static-core";
-import { generateScopeDescription } from "../services/ai.service.js";
+import {
+  generateScopeDescription,
+  isConstructionRelated,
+  UNRELATED_SCOPE_RESPONSE,
+} from "../services/ai.service.js";
 import type { GenerateDescriptionBody } from "../types/api.js";
 import { ApiError } from "../utils/apierror.js";
 import { ApiResponse } from "../utils/apiresponse.js";
@@ -13,6 +17,10 @@ export const generateDescription = asyncHandler<
 
   if (!prompt?.trim()) {
     throw new ApiError(400, "Prompt is required.");
+  }
+
+  if (!(await isConstructionRelated(prompt))) {
+    throw new ApiError(422, UNRELATED_SCOPE_RESPONSE);
   }
 
   const description = await generateScopeDescription(prompt);
