@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { verifyJWT } from "../middleware/auth.middleware.js";
+import { requireAdmin, verifyJWT } from "../middleware/auth.middleware.js";
 import {
     createItems,
     getAllItems,
@@ -10,10 +10,10 @@ import {
 
 const router = Router();
 
-router.route("/").post(verifyJWT, createItems);
+router.route("/").post(verifyJWT, requireAdmin, createItems);
 router.route("/").get(verifyJWT, getAllItems);
 router.route("/:itemId").get(verifyJWT, getItemById);
-router.route("/:itemId").put(verifyJWT, updateItem);
-router.route("/:itemId").delete(verifyJWT, deleteItem);
+router.route("/:itemId").put(verifyJWT, requireAdmin, updateItem);
+router.route("/:itemId").delete(verifyJWT, requireAdmin, deleteItem);
 
 export default router;

@@ -2,6 +2,15 @@ import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiError } from "../utils/apierror.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { authRepository } from "../repositories/auth.repository.js";
+import { getAuthUser } from "../utils/auth.js";
+
+export const requireAdmin = asyncHandler(async (req, _res, next) => {
+  if (getAuthUser(req).role !== "ADMIN") {
+    throw new ApiError(403, "You are not allowed to manage scope-of-work items.");
+  }
+
+  next();
+});
 
 export const verifyJWT = asyncHandler(async (req, _res, next) => {
   const token: string | undefined =
