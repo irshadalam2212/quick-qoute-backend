@@ -12,8 +12,7 @@ export const dashboardRepository = {
       quotations30d,
       invoices30d,
       pendingQuotations,
-      unpaidInvoicesCount,
-      unpaidInvoicesAmount,
+      outstandingInvoices,
     ] = await Promise.all([
       prisma.quotation.count({ where: { createdById: userId } }),
       prisma.invoice.count({ where: { createdById: userId } }),
@@ -26,12 +25,9 @@ export const dashboardRepository = {
       prisma.quotation.count({
         where: { createdById: userId, status: { in: ["DRAFT", "SUBMITTED"] } },
       }),
-      prisma.invoice.count({
-        where: { createdById: userId, paymentStatus: "UNPAID" },
-      }),
-      prisma.invoice.aggregate({
-        where: { createdById: userId, paymentStatus: "UNPAID" },
-        _sum: { grandTotal: true },
+      prisma.invoice.findMany({
+        where: { createdById: userId },
+        select: { grandTotal: true, payments: { select: { amount: true } } },
       }),
     ]);
 
@@ -52,8 +48,7 @@ export const dashboardRepository = {
       quotations30d,
       invoices30d,
       pendingQuotations,
-      unpaidInvoicesCount,
-      unpaidInvoicesAmount,
+      outstandingInvoices,
       quotations,
       invoices,
     };

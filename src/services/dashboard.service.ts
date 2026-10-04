@@ -47,6 +47,18 @@ export const dashboardService = {
     });
 
     const monthlyData = [...monthlyMap.values()];
+    const outstanding = data.outstandingInvoices.reduce(
+      (totals, invoice) => {
+        const received = invoice.payments.reduce((sum, payment) => sum + payment.amount, 0);
+        const balance = Math.max(0, invoice.grandTotal - received);
+        if (balance > 0.005) {
+          totals.count += 1;
+          totals.amount += balance;
+        }
+        return totals;
+      },
+      { count: 0, amount: 0 },
+    );
     return {
       totalQuotations: data.totalQuotations,
       totalQuotations30d: data.quotations30d,
@@ -61,8 +73,8 @@ export const dashboardService = {
           ? 0
           : Math.round((data.invoices30d / data.totalInvoices) * 100),
       pendingQuotations: data.pendingQuotations,
-      unpaidInvoicesCount: data.unpaidInvoicesCount,
-      unpaidInvoicesAmount: data.unpaidInvoicesAmount._sum.grandTotal ?? 0,
+      outstandingInvoicesCount: outstanding.count,
+      outstandingInvoicesAmount: outstanding.amount,
       monthlyRevenue: monthlyData.map((month) => month.revenue),
       monthlyQuotations: monthlyData.map((month) => month.quotations),
       monthlyInvoices: monthlyData.map((month) => month.invoices),
