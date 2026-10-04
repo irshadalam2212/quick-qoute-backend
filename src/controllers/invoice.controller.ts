@@ -1,115 +1,15 @@
 import type { ParamsDictionary } from "express-serve-static-core";
-import type { Prisma } from "@prisma/client";
-import prisma from "../lib/prisma.js";
 import type { InvoiceBody } from "../types/api.js";
-import { ApiError } from "../utils/apierror.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiResponse } from "../utils/apiresponse.js";
 import { getAuthUser } from "../utils/auth.js";
-import { toLineItemCreate } from "../utils/lineitems.js";
+import { invoiceService } from "../services/invoice.service.js";
 
 type InvoiceParams = { invoiceId: string };
 
-const invoiceInclude = {
-  createdBy: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      companyName: true,
-      mobileNumber: true,
-      alternateMobile: true,
-      website: true,
-      gstNumber: true,
-      panNumber: true,
-      services: true,
-      address: true,
-      logo: true,
-      signature: true,
-    },
-  },
-
-  quotation: {
-    select: {
-      id: true,
-      quotationNo: true,
-    },
-  },
-
-  items: {
-    include: { unit: { select: { id: true, name: true, shortName: true } } },
-  },
-} satisfies Prisma.InvoiceInclude;
-
 const createInvoice = asyncHandler<ParamsDictionary, InvoiceBody>(
   async (req, res) => {
-    const authUser = getAuthUser(req);
-
-    const {
-      clientName,
-      address,
-      items,
-      subtotal,
-      taxRate,
-      taxAmount,
-      discount,
-      grandTotal,
-      quotationId,
-    } = req.body;
-
-    if (!clientName || !address || !quotationId) {
-      throw new ApiError(400, "Required fields are missing.");
-    }
-
-    if (!Array.isArray(items) || items.length === 0) {
-      throw new ApiError(400, "At least one invoice item is required.");
-    }
-
-    const quotation = await prisma.quotation.findUnique({
-      where: {
-        id: Number(quotationId),
-        createdById: authUser.id,
-      },
-      select: { id: true },
-    });
-
-    if (!quotation) {
-      throw new ApiError(404, "Quotation not found.");
-    }
-
-    const invoice = await prisma.invoice.create({
-      data: {
-        clientName,
-        address,
-
-        subtotal,
-        taxRate: taxRate || 0,
-        taxAmount: taxAmount || 0,
-        discount: discount || 0,
-        grandTotal,
-
-        paymentStatus: "UNPAID",
-
-        quotation: {
-          connect: {
-            id: Number(quotationId),
-          },
-        },
-
-        createdBy: {
-          connect: {
-            id: authUser.id,
-          },
-        },
-
-        items: {
-          create: items.map(toLineItemCreate),
-        },
-      },
-
-      include: invoiceInclude,
-    });
-
+    const invoice = await invoiceService.create(getAuthUser(req).id, req.body);
     return res
       .status(201)
       .json(new ApiResponse(201, invoice, "Invoice created successfully!"));
@@ -117,42 +17,17 @@ const createInvoice = asyncHandler<ParamsDictionary, InvoiceBody>(
 );
 
 const getAllInvoices = asyncHandler(async (req, res) => {
-  const userId = getAuthUser(req).id;
-
-  const invoices = await prisma.invoice.findMany({
-    where: {
-      createdById: userId,
-    },
-
-    include: invoiceInclude,
-
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
+  const invoices = await invoiceService.list(getAuthUser(req).id);
   return res
     .status(200)
     .json(new ApiResponse(200, invoices, "Invoices fetched successfully!"));
 });
 
 const getInvoiceById = asyncHandler<InvoiceParams>(async (req, res) => {
-  const { invoiceId } = req.params;
-  const userId = getAuthUser(req).id;
-
-  const invoice = await prisma.invoice.findUnique({
-    where: {
-      id: Number(invoiceId),
-      createdById: userId,
-    },
-
-    include: invoiceInclude,
-  });
-
-  if (!invoice) {
-    throw new ApiError(404, "Invoice not found");
-  }
-
+  const invoice = await invoiceService.get(
+    Number(req.params.invoiceId),
+    getAuthUser(req).id,
+  );
   return res
     .status(200)
     .json(new ApiResponse(200, invoice, "Invoice fetched successfully!"));
@@ -160,129 +35,22 @@ const getInvoiceById = asyncHandler<InvoiceParams>(async (req, res) => {
 
 const updateInvoice = asyncHandler<InvoiceParams, InvoiceBody>(
   async (req, res) => {
-    const { invoiceId } = req.params;
-    const userId = getAuthUser(req).id;
-
-    const {
-      clientName,
-      address,
-      items,
-      subtotal,
-      taxRate,
-      taxAmount,
-      discount,
-      grandTotal,
-      paymentStatus,
-      quotationId,
-    } = req.body;
-
-    if (!Array.isArray(items) || items.length === 0) {
-      throw new ApiError(400, "At least one invoice item is required.");
-    }
-
-    const existingInvoice = await prisma.invoice.findUnique({
-      where: {
-        id: Number(invoiceId),
-        createdById: userId,
-      },
-    });
-
-    if (!existingInvoice) {
-      throw new ApiError(404, "Invoice not found.");
-    }
-
-    // Validate quotation
-    const quotation = await prisma.quotation.findUnique({
-      where: {
-        id: Number(quotationId),
-        createdById: userId,
-      },
-    });
-
-    if (!quotation) {
-      throw new ApiError(404, "Quotation not found.");
-    }
-
-    const updatedInvoice = await prisma.invoice.update({
-      where: {
-        id: Number(invoiceId),
-      },
-
-      data: {
-        clientName,
-        address,
-
-        subtotal: Number(subtotal),
-        taxRate: Number(taxRate) || 0,
-        taxAmount: Number(taxAmount) || 0,
-        discount: Number(discount) || 0,
-        grandTotal: Number(grandTotal),
-
-        paymentStatus,
-
-        quotation: {
-          connect: {
-            id: Number(quotationId),
-          },
-        },
-
-        items: {
-          deleteMany: {},
-
-          create: items.map(toLineItemCreate),
-        },
-      },
-
-      include: {
-        ...invoiceInclude,
-
-        items: {
-          include: {
-            unit: {
-              select: {
-                id: true,
-                name: true,
-                shortName: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
+    const invoice = await invoiceService.update(
+      Number(req.params.invoiceId),
+      getAuthUser(req).id,
+      req.body,
+    );
     return res
       .status(200)
-      .json(
-        new ApiResponse(200, updatedInvoice, "Invoice updated successfully."),
-      );
+      .json(new ApiResponse(200, invoice, "Invoice updated successfully."));
   },
 );
 
 const deleteInvoice = asyncHandler<InvoiceParams>(async (req, res) => {
-  const { invoiceId } = req.params;
-  const userId = getAuthUser(req).id;
-
-  const existingInvoice = await prisma.invoice.findUnique({
-    where: {
-      id: Number(invoiceId),
-      createdById: userId,
-    },
-    select: {
-      id: true,
-      clientName: true,
-    },
-  });
-
-  if (!existingInvoice) {
-    throw new ApiError(404, "Invoice not found.");
-  }
-
-  await prisma.invoice.delete({
-    where: {
-      id: Number(invoiceId),
-    },
-  });
-
+  await invoiceService.delete(
+    Number(req.params.invoiceId),
+    getAuthUser(req).id,
+  );
   return res
     .status(200)
     .json(new ApiResponse(200, null, "Invoice deleted successfully."));

@@ -11,7 +11,10 @@ import dashboardRouter from "./routes/dashboard.routes.js";
 import unitRouter from "./routes/unit.routes.js";
 import aiRouter from "./routes/ai.routes.js";
 import categoryRouter from "./routes/category.routes.js";
-import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
+import {
+  errorHandler,
+  notFoundHandler,
+} from "./middleware/error.middleware.js";
 
 const app: Express = express();
 
@@ -30,29 +33,28 @@ app.use(
   }),
 );
 
-
-//middlewares
+// Shared request middleware
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 
-//public routes
+// Public routes
 app.use("/api/v1/healthcheck", healthCheckRouter);
 app.use("/api/v1/uom", unitRouter);
 app.use("/api/v1/categories", categoryRouter);
 
-//private routes
+// Authenticated routes
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/items", itemRouter);
 app.use("/api/v1/quotations", quotationRouter);
 app.use("/api/v1/invoices", invoiceRouter);
 app.use("/api/v1/dashboard", dashboardRouter);
 
-//ai routes
+// AI routes
 app.use("/api/v1/ai", aiRouter);
 
-//error handling (must be registered after all routes)
+// Error handling must be registered after all routes
 app.use(notFoundHandler);
 app.use(errorHandler);
 

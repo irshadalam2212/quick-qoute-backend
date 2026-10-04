@@ -1,7 +1,7 @@
-import prisma from "../lib/prisma.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 import { ApiError } from "../utils/apierror.js";
 import { verifyAccessToken } from "../utils/jwt.js";
+import { authRepository } from "../repositories/auth.repository.js";
 
 export const verifyJWT = asyncHandler(async (req, _res, next) => {
   const token: string | undefined =
@@ -15,15 +15,7 @@ export const verifyJWT = asyncHandler(async (req, _res, next) => {
   try {
     const decodedToken = verifyAccessToken(token);
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: decodedToken.id,
-      },
-      omit: {
-        password: true,
-        refreshToken: true,
-      },
-    });
+    const user = await authRepository.findAccessUser(decodedToken.id);
 
     if (!user) {
       throw new ApiError(401, "Invalid access token");
