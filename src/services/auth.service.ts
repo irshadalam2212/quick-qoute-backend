@@ -67,6 +67,7 @@ export const authService = {
       signature: signatureUrl,
     });
   },
+
   async login(email: string, password: string) {
     const user = await authRepository.findByEmail(email);
     if (!user) throw new ApiError(404, "User doesn't exist");
@@ -76,6 +77,7 @@ export const authService = {
     const loggedInUser = await authRepository.findAuthenticatedUser(user.id);
     return { user: loggedInUser, ...tokens };
   },
+
   async startGuestSession() {
     const password = await this.guestPasswordHash();
     const user = await authRepository.upsertGuest(
@@ -86,19 +88,23 @@ export const authService = {
       throw new ApiError(409, "The configured guest account is unavailable.");
     return { user, ...(await this.generateTokens(user.id)) };
   },
+
   logout(userId: number) {
     return authRepository.saveRefreshToken(userId, null);
   },
+
   async currentUser(userId: number) {
     const user = await authRepository.findProfile(userId);
     if (!user) throw new ApiError(404, "User not found.");
     return user;
   },
+
   async listUsers(role: string) {
     if (role !== "ADMIN")
       throw new ApiError(403, "You are not allowed to view users.");
     return authRepository.findUsers();
   },
+
   async refreshSession(token: string) {
     try {
       const decoded = verifyRefreshToken(token);
@@ -110,6 +116,7 @@ export const authService = {
       throw new ApiError(401, "Invalid refresh token");
     }
   },
+
   async updateProfile(
     userId: number,
     body: UpdateProfileBody,
@@ -162,6 +169,7 @@ export const authService = {
       ...(signature && { signature: signature.secure_url }),
     });
   },
+
   async generateTokens(
     userId: number,
   ): Promise<{ accessToken: string; refreshToken: string }> {
@@ -179,6 +187,7 @@ export const authService = {
       );
     }
   },
+
   guestPasswordHash() {
     guestPasswordHashPromise ??= bcrypt.hash(
       randomBytes(32).toString("hex"),
@@ -186,4 +195,5 @@ export const authService = {
     );
     return guestPasswordHashPromise;
   },
+  
 };
