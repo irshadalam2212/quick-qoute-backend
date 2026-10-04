@@ -23,6 +23,7 @@ export const invoiceInclude = {
   items: {
     include: { unit: { select: { id: true, name: true, shortName: true } } },
   },
+  payments: { orderBy: { date: "desc" as const } },
 } satisfies Prisma.InvoiceInclude;
 
 export const invoiceRepository = {

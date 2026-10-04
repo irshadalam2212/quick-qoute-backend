@@ -56,7 +56,6 @@ export const invoiceService = {
       taxAmount,
       discount,
       grandTotal,
-      paymentStatus,
       quotationId,
     } = body;
     if (!Array.isArray(items) || items.length === 0)
@@ -65,6 +64,10 @@ export const invoiceService = {
       throw new ApiError(404, "Invoice not found.");
     if (!(await invoiceRepository.findQuotation(Number(quotationId), userId)))
       throw new ApiError(404, "Quotation not found.");
+    const existingInvoice = await invoiceRepository.findById(id, userId);
+    const paymentsTotal = existingInvoice?.payments.reduce((sum, payment) => sum + payment.amount, 0) ?? 0;
+    if (paymentsTotal > Number(grandTotal) + 0.005)
+      throw new ApiError(400, "Invoice total cannot be less than the payments already received.");
     return invoiceRepository.update(id, {
       clientName,
       address,
@@ -73,7 +76,7 @@ export const invoiceService = {
       taxAmount: Number(taxAmount) || 0,
       discount: Number(discount) || 0,
       grandTotal: Number(grandTotal),
-      paymentStatus,
+      paymentStatus: paymentsTotal >= Number(grandTotal) - 0.005 ? "PAID" : paymentsTotal > 0 ? "PARTIAL" : "UNPAID",
       quotation: { connect: { id: Number(quotationId) } },
       items: { deleteMany: {}, create: items.map(toLineItemCreate) },
     });

@@ -28,6 +28,7 @@ model User {
   website         String?
   categories      Category[]  @relation("UserCategories")
   invoices        Invoice[]
+  payments        Payment[]
   items           Item[]      @relation("UserItems")
   quotations      Quotation[]
 }
@@ -110,9 +111,29 @@ model Invoice {
   createdBy     User          @relation(fields: [createdById], references: [id])
   quotation     Quotation     @relation(fields: [quotationId], references: [id])
   items         InvoiceItem[]
+  payments      Payment[]
 
   @@index([createdById], map: "Invoice_createdById_fkey")
   @@index([quotationId], map: "Invoice_quotationId_fkey")
+}
+
+model Payment {
+  id          Int      @id @default(autoincrement())
+  amount      Float
+  date        DateTime @default(now())
+  method      String
+  reference   String?
+  notes       String?  @db.Text
+  invoiceId   Int
+  createdById Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([createdById])
+  @@index([date])
 }
 
 model InvoiceItem {

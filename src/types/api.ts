@@ -100,6 +100,15 @@ export interface InvoiceBody {
   quotationId: Numeric;
 }
 
+export interface PaymentBody {
+  invoiceId: Numeric;
+  amount: Numeric;
+  date: string;
+  method: string;
+  reference?: string;
+  notes?: string;
+}
+
 export interface GenerateDescriptionBody {
   prompt?: string;
 }

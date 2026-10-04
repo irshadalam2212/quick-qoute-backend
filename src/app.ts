@@ -11,6 +11,7 @@ import dashboardRouter from "./routes/dashboard.routes.js";
 import unitRouter from "./routes/unit.routes.js";
 import aiRouter from "./routes/ai.routes.js";
 import categoryRouter from "./routes/category.routes.js";
+import paymentRouter from "./routes/payment.routes.js";
 import {
   errorHandler,
   notFoundHandler,
@@ -49,6 +50,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/items", itemRouter);
 app.use("/api/v1/quotations", quotationRouter);
 app.use("/api/v1/invoices", invoiceRouter);
+app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/dashboard", dashboardRouter);
 
 // AI routes
