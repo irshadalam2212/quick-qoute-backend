@@ -17,6 +17,7 @@ import { authService } from "../services/auth.service.js";
 const cookieOptions: CookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === "production",
+  sameSite: "lax",
 };
 
 const registerUser = asyncHandler<ParamsDictionary, RegisterUserBody>(

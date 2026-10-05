@@ -17,6 +17,7 @@ import {
 } from "../validators/index.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/multer.middleware.js";
+import { loginRateLimit } from "../middleware/login-rate-limit.middleware.js";
 
 const router = Router();
 
@@ -38,7 +39,7 @@ router
     validate,
     registerUser
   );
-router.route("/login").post(userLoginValidator(), validate, login);
+router.route("/login").post(loginRateLimit, userLoginValidator(), validate, login);
 router.route("/guest-login").post(guestLogin);
 router.route("/refresh-token").post(refreshAccessToken);
 

@@ -69,13 +69,14 @@ export const authService = {
   },
 
   async login(email: string, password: string) {
-    const user = await authRepository.findByEmail(email);
-    if (!user) throw new ApiError(404, "User doesn't exist");
-    if (!(await bcrypt.compare(password, user.password)))
-      throw new ApiError(401, "Invalid credentials");
+    const user = await authRepository.findByEmail(email.toLowerCase().trim());
+    // Keep the response identical for unknown accounts and wrong passwords to
+    // avoid exposing which email addresses are registered.
+    if (!user || !(await bcrypt.compare(password, user.password)))
+      throw new ApiError(401, "Invalid email or password");
     const tokens = await this.generateTokens(user.id);
-    const loggedInUser = await authRepository.findAuthenticatedUser(user.id);
-    return { user: loggedInUser, ...tokens };
+    // const loggedInUser = await authRepository.findAuthenticatedUser(user.id);
+    return { ...tokens };
   },
 
   async startGuestSession() {

@@ -4,6 +4,7 @@ import "dotenv/config";
 import app from "./app.js";
 import prisma from "./lib/prisma.js";
 import { env } from "./config/env.js";
+import { closeLoginRateLimitRedis } from "./middleware/login-rate-limit.middleware.js";
 
 const PORT = env.PORT;
 
@@ -15,6 +16,7 @@ const shutdown = async (): Promise<void> => {
   console.log("Shutting down...");
 
   await prisma.$disconnect();
+  await closeLoginRateLimitRedis();
 
   server.close(() => {
     process.exit(0);
