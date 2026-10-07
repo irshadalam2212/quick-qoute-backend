@@ -87,7 +87,7 @@ export const authService = {
     );
     if (user.role !== "GUEST")
       throw new ApiError(409, "The configured guest account is unavailable.");
-    return { user, ...(await this.generateTokens(user.id)) };
+    return { ...(await this.generateTokens(user.id)) };
   },
 
   logout(userId: number) {
@@ -196,5 +196,4 @@ export const authService = {
     );
     return guestPasswordHashPromise;
   },
-  
 };

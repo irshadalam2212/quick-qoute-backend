@@ -89,14 +89,14 @@ const refreshAccessToken = asyncHandler<ParamsDictionary, RefreshTokenBody>(
 
 const updateProfile = asyncHandler<ParamsDictionary, UpdateProfileBody>(
   async (req, res) => {
-    const user = await authService.updateProfile(
+    await authService.updateProfile(
       getAuthUser(req).id,
       req.body,
       req.files as UploadedFields | undefined,
     );
     return res
       .status(200)
-      .json(new ApiResponse(200, user, "Profile updated successfully."));
+      .json(new ApiResponse(200, [], "Profile updated successfully."));
   },
 );
 
