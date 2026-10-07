@@ -21,14 +21,17 @@ export const itemService = {
     };
     return itemRepository.create(data);
   },
+
   list() {
     return itemRepository.findAll();
   },
+
   async get(id: number) {
     const item = await itemRepository.findById(id);
     if (!item) throw new ApiError(404, "Item not found");
     return item;
   },
+
   async update(id: number, userId: number, body: Partial<ItemBody>) {
     const existing = await itemRepository.findOwned(id, userId);
     if (!existing) throw new ApiError(404, "Item not found");

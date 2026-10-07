@@ -9,10 +9,10 @@ type ItemParams = { itemId: string };
 
 const createItems = asyncHandler<ParamsDictionary, ItemBody>(
   async (req, res) => {
-    const item = await itemService.create(getAuthUser(req).id, req.body);
+    await itemService.create(getAuthUser(req).id, req.body);
     return res
       .status(201)
-      .json(new ApiResponse(201, item, "Item created successfully"));
+      .json(new ApiResponse(201, [], "Item created successfully"));
   },
 );
 
@@ -32,14 +32,14 @@ const getItemById = asyncHandler<ItemParams>(async (req, res) => {
 
 const updateItem = asyncHandler<ItemParams, Partial<ItemBody>>(
   async (req, res) => {
-    const item = await itemService.update(
-      Number(req.params.itemId),
-      getAuthUser(req).id,
-      req.body,
-    );
+    // const item = await itemService.update(
+    //   Number(req.params.itemId),
+    //   getAuthUser(req).id,
+    //   req.body,
+    // );
     return res
       .status(200)
-      .json(new ApiResponse(200, item, "Item updated successfully"));
+      .json(new ApiResponse(200, [], "Item updated successfully"));
   },
 );
 

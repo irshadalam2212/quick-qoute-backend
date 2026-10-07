@@ -14,12 +14,12 @@ export const itemRepository = {
   },
   findAll() {
     return prisma.item.findMany({
-      include: createdBySelect,
+      // include: createdBySelect,
       orderBy: { createdAt: "desc" },
     });
   },
   findById(id: number) {
-    return prisma.item.findUnique({ where: { id }, include: createdBySelect });
+    return prisma.item.findUnique({ where: { id } });
   },
   findOwned(id: number, createdById: number) {
     return prisma.item.findUnique({ where: { id, createdById } });
