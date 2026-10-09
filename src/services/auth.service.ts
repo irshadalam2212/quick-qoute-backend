@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcrypt";
-import { Prisma } from "@prisma/client";
+import { Prisma, type User } from "@prisma/client";
 import type { RegisterUserBody } from "../types/api.js";
 import {
   isAllowedImage,
@@ -142,7 +142,7 @@ export const authService = {
     // avoid exposing which email addresses are registered.
     if (!user || !(await bcrypt.compare(password, user.password)))
       throw new ApiError(401, "Invalid email or password");
-    const tokens = await this.generateTokens(user.id);
+    const tokens = await this.generateTokens(user);
     // const loggedInUser = await authRepository.findAuthenticatedUser(user.id);
     return { ...tokens };
   },
@@ -155,7 +155,7 @@ export const authService = {
     );
     if (user.role !== "GUEST")
       throw new ApiError(409, "The configured guest account is unavailable.");
-    return { ...(await this.generateTokens(user.id)) };
+    return { ...(await this.generateTokens(user)) };
   },
 
   logout(userId: number) {
@@ -168,28 +168,21 @@ export const authService = {
       const user = await authRepository.findById(decoded.id);
       if (!user || token !== user.refreshToken)
         throw new ApiError(401, "Invalid refresh token");
-      return this.generateTokens(user.id);
+      return this.generateTokens(user);
     } catch {
       throw new ApiError(401, "Invalid refresh token");
     }
   },
 
+  // Callers already hold the user, so no extra lookup here. Failures propagate
+  // to the error middleware, which logs them and hides details in production.
   async generateTokens(
-    userId: number,
+    user: Pick<User, "id" | "email" | "name">,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    try {
-      const user = await authRepository.findById(userId);
-      if (!user) throw new ApiError(404, "User not found");
-      const accessToken = generateAccessToken(user);
-      const refreshToken = generateRefreshToken(user.id);
-      await authRepository.saveRefreshToken(user.id, refreshToken);
-      return { accessToken, refreshToken };
-    } catch {
-      throw new ApiError(
-        500,
-        "Something went wrong while generating access token",
-      );
-    }
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user.id);
+    await authRepository.saveRefreshToken(user.id, refreshToken);
+    return { accessToken, refreshToken };
   },
 
   guestPasswordHash() {

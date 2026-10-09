@@ -88,10 +88,12 @@ const userRegisterValidator = (): ValidationChain[] => {
 const userLoginValidator = (): ValidationChain[] => {
   return [
     body("email")
+      .trim()
       .notEmpty()
       .withMessage("Email is required")
       .isEmail()
       .withMessage("Email is not valid"),
+    // Never trim passwords: they are compared exactly as registered.
     body("password").notEmpty().withMessage("Password is required"),
   ];
 };
