@@ -2,23 +2,6 @@ import type { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 
 export const quotationInclude = {
-  // createdBy: {
-  //   select: {
-  //     id: true,
-  //     name: true,
-  //     email: true,
-  //     companyName: true,
-  //     mobileNumber: true,
-  //     alternateMobile: true,
-  //     website: true,
-  //     gstNumber: true,
-  //     panNumber: true,
-  //     services: true,
-  //     address: true,
-  //     logo: true,
-  //     signature: true,
-  //   },
-  // },
   items: {
     include: { unit: { select: { id: true, name: true, shortName: true } } },
   },
@@ -30,7 +13,7 @@ export const quotationRepository = {
       where: { id: userId },
       select: { companyName: true },
     });
-  },
+  },  
   findNumbers(prefix: string) {
     return prisma.quotation.findMany({
       where: { quotationNo: { startsWith: prefix } },
@@ -43,7 +26,7 @@ export const quotationRepository = {
   findAll(userId: number) {
     return prisma.quotation.findMany({
       where: { createdById: userId },
-      // include: quotationInclude,
+      include: { items: true },
       orderBy: { createdAt: "desc" },
     });
   },
