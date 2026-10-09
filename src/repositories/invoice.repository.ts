@@ -2,23 +2,23 @@ import type { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 
 export const invoiceInclude = {
-  createdBy: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      companyName: true,
-      mobileNumber: true,
-      alternateMobile: true,
-      website: true,
-      gstNumber: true,
-      panNumber: true,
-      services: true,
-      address: true,
-      logo: true,
-      signature: true,
-    },
-  },
+  // createdBy: {
+  //   select: {
+  //     id: true,
+  //     name: true,
+  //     email: true,
+  //     companyName: true,
+  //     mobileNumber: true,
+  //     alternateMobile: true,
+  //     website: true,
+  //     gstNumber: true,
+  //     panNumber: true,
+  //     services: true,
+  //     address: true,
+  //     logo: true,
+  //     signature: true,
+  //   },
+  // },
   quotation: { select: { id: true, quotationNo: true } },
   items: {
     include: { unit: { select: { id: true, name: true, shortName: true } } },

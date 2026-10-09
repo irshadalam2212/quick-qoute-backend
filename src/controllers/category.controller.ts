@@ -9,13 +9,8 @@ type CategoryParams = { categoryId: string };
 
 const createCategory = asyncHandler<ParamsDictionary, CreateCategoryBody>(
   async (req, res) => {
-    const category = await categoryService.create(
-      getAuthUser(req).id,
-      req.body,
-    );
-    return res
-      .status(201)
-      .json(new ApiResponse(201, category, "Category created"));
+    await categoryService.create(getAuthUser(req).id, req.body);
+    return res.status(201).json(new ApiResponse(201, [], "Category created"));
   },
 );
 
@@ -35,13 +30,8 @@ const getCategoryById = asyncHandler<CategoryParams>(async (req, res) => {
 
 const updateCategory = asyncHandler<CategoryParams, UpdateCategoryBody>(
   async (req, res) => {
-    const category = await categoryService.update(
-      Number(req.params.categoryId),
-      req.body,
-    );
-    return res
-      .status(200)
-      .json(new ApiResponse(200, category, "Category updated"));
+    await categoryService.update(Number(req.params.categoryId), req.body);
+    return res.status(200).json(new ApiResponse(200, [], "Category updated"));
   },
 );
 

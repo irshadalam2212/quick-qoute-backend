@@ -26,11 +26,11 @@ const getItemById = asyncHandler<ItemParams>(async (req, res) => {
 
 const updateItem = asyncHandler<ItemParams, Partial<ItemBody>>(
   async (req, res) => {
-    // const item = await itemService.update(
-    //   Number(req.params.itemId),
-    //   getAuthUser(req).id,
-    //   req.body,
-    // );
+    await itemService.update(
+      Number(req.params.itemId),
+      getAuthUser(req).id,
+      req.body,
+    );
     return res.status(200).json(new ApiResponse(200, [], "Item updated"));
   },
 );

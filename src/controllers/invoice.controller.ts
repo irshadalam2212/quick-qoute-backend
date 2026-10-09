@@ -9,10 +9,8 @@ type InvoiceParams = { invoiceId: string };
 
 const createInvoice = asyncHandler<ParamsDictionary, InvoiceBody>(
   async (req, res) => {
-    const invoice = await invoiceService.create(getAuthUser(req).id, req.body);
-    return res
-      .status(201)
-      .json(new ApiResponse(201, invoice, "Invoice created"));
+    await invoiceService.create(getAuthUser(req).id, req.body);
+    return res.status(201).json(new ApiResponse(201, [], "Invoice created"));
   },
 );
 
@@ -33,14 +31,12 @@ const getInvoiceById = asyncHandler<InvoiceParams>(async (req, res) => {
 
 const updateInvoice = asyncHandler<InvoiceParams, InvoiceBody>(
   async (req, res) => {
-    const invoice = await invoiceService.update(
+    await invoiceService.update(
       Number(req.params.invoiceId),
       getAuthUser(req).id,
       req.body,
     );
-    return res
-      .status(200)
-      .json(new ApiResponse(200, invoice, "Invoice updated"));
+    return res.status(200).json(new ApiResponse(200, [], "Invoice updated"));
   },
 );
 

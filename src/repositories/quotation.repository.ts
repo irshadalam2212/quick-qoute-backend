@@ -2,23 +2,23 @@ import type { Prisma } from "@prisma/client";
 import prisma from "../lib/prisma.js";
 
 export const quotationInclude = {
-  createdBy: {
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      companyName: true,
-      mobileNumber: true,
-      alternateMobile: true,
-      website: true,
-      gstNumber: true,
-      panNumber: true,
-      services: true,
-      address: true,
-      logo: true,
-      signature: true,
-    },
-  },
+  // createdBy: {
+  //   select: {
+  //     id: true,
+  //     name: true,
+  //     email: true,
+  //     companyName: true,
+  //     mobileNumber: true,
+  //     alternateMobile: true,
+  //     website: true,
+  //     gstNumber: true,
+  //     panNumber: true,
+  //     services: true,
+  //     address: true,
+  //     logo: true,
+  //     signature: true,
+  //   },
+  // },
   items: {
     include: { unit: { select: { id: true, name: true, shortName: true } } },
   },
@@ -50,7 +50,8 @@ export const quotationRepository = {
   findById(id: number, userId: number) {
     return prisma.quotation.findUnique({
       where: { id, createdById: userId },
-      include: quotationInclude,
+      // `unitId` is a scalar field on each item; omit the nested `unit` relation.
+      include: { items: true },
     });
   },
   findOwned(id: number, userId: number) {
