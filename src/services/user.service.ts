@@ -2,6 +2,7 @@ import type { UpdateProfileBody } from "../types/api.js";
 import type { UploadedFields } from "../middleware/multer.middleware.js";
 import { ApiError } from "../utils/apierror.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { optionalText } from "../utils/text.js";
 import { userRepository } from "../repositories/user.repository.js";
 
 export const userService = {
@@ -38,8 +39,6 @@ export const userService = {
     if (!(await userRepository.findProfile(userId)))
       throw new ApiError(404, "User not found.");
 
-    const optionalText = (value: string | null | undefined) =>
-      value == null ? value : value.trim() || null;
     return userRepository.updateProfile(userId, {
       ...(body.name !== undefined && { name: body.name.trim() }),
       ...(body.companyName !== undefined && {

@@ -1,7 +1,12 @@
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcrypt";
+import { Prisma } from "@prisma/client";
 import type { RegisterUserBody } from "../types/api.js";
-import type { UploadedFields } from "../middleware/multer.middleware.js";
+import {
+  isAllowedImage,
+  MAX_IMAGE_SIZE,
+  type UploadedFields,
+} from "../middleware/multer.middleware.js";
 import { ApiError } from "../utils/apierror.js";
 import {
   generateAccessToken,
@@ -9,7 +14,11 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt.js";
 import { authRepository } from "../repositories/auth.repository.js";
-import { uploadToCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../utils/cloudinary.js";
+import { optionalText } from "../utils/text.js";
 
 const GUEST_ACCOUNT_EMAIL = "guest@quickquote.local";
 
@@ -35,37 +44,96 @@ export const authService = {
       throw new ApiError(409, "This email address is reserved.");
     if (await authRepository.findByEmail(normalizedEmail))
       throw new ApiError(409, "User already exists");
-    const logoFile = files?.logo?.[0];
-    const signatureFile = files?.signature?.[0];
-    let logoUrl: string | null = null;
-    let signatureUrl: string | null = null;
-    if (logoFile)
-      logoUrl = (
-        await uploadToCloudinary(logoFile.buffer, "quickquote/users/logos")
-      ).secure_url;
-    if (signatureFile)
-      signatureUrl = (
-        await uploadToCloudinary(
-          signatureFile.buffer,
-          "quickquote/users/signatures",
-        )
-      ).secure_url;
     const hashedPassword = await bcrypt.hash(password, 10);
-    return authRepository.createRegisteredUser({
-      name: name.trim(),
-      email: normalizedEmail,
-      password: hashedPassword,
-      companyName,
-      mobileNumber,
-      alternateMobile,
-      website,
-      gstNumber,
-      panNumber,
-      services,
-      address,
-      logo: logoUrl,
-      signature: signatureUrl,
-    });
+    let user;
+    try {
+      user = await authRepository.createRegisteredUser({
+        name: name.trim(),
+        email: normalizedEmail,
+        password: hashedPassword,
+        companyName: optionalText(companyName),
+        mobileNumber: optionalText(mobileNumber),
+        alternateMobile: optionalText(alternateMobile),
+        website: optionalText(website),
+        gstNumber: optionalText(gstNumber),
+        panNumber: optionalText(panNumber),
+        services: optionalText(services),
+        address: optionalText(address),
+      });
+    } catch (error) {
+      // A concurrent registration can win the race after the existence check.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      )
+        throw new ApiError(409, "User already exists");
+      throw error;
+    }
+    // The account exists from here on; image problems only produce warnings.
+    return this.attachRegistrationImages(user, files);
+  },
+
+  /**
+   * Best-effort upload of the optional logo and signature for a newly created
+   * user. Never throws: each image that can't be stored is skipped and
+   * reported in `warnings` so the user can add it later from their profile.
+   */
+  async attachRegistrationImages<T extends { id: number }>(
+    user: T,
+    files?: UploadedFields,
+  ): Promise<T & { warnings: string[] }> {
+    const warnings: string[] = [];
+    const images = [
+      { field: "logo", label: "Logo", folder: "quickquote/users/logos" },
+      {
+        field: "signature",
+        label: "Signature",
+        folder: "quickquote/users/signatures",
+      },
+    ] as const;
+
+    const uploads = await Promise.all(
+      images.map(async ({ field, label, folder }) => {
+        const file = files?.[field]?.[0];
+        if (!file) return null;
+        if (file.size > MAX_IMAGE_SIZE || !isAllowedImage(file.buffer)) {
+          warnings.push(
+            `${label} was skipped: only JPG, PNG or WEBP images up to 5 MB are allowed. You can add it from your profile.`,
+          );
+          return null;
+        }
+        try {
+          return { field, upload: await uploadToCloudinary(file.buffer, folder) };
+        } catch (error) {
+          console.error(`Registration ${field} upload failed:`, error);
+          warnings.push(
+            `${label} could not be uploaded. You can add it from your profile.`,
+          );
+          return null;
+        }
+      }),
+    );
+
+    const uploaded = uploads.filter((entry) => entry !== null);
+    if (uploaded.length === 0) return { ...user, warnings };
+
+    try {
+      const updated = await authRepository.saveImages(
+        user.id,
+        Object.fromEntries(
+          uploaded.map(({ field, upload }) => [field, upload.secure_url]),
+        ),
+      );
+      return { ...user, ...updated, warnings };
+    } catch (error) {
+      console.error("Saving registration images failed:", error);
+      // Nothing references these uploads, so remove them.
+      await deleteFromCloudinary(uploaded.map(({ upload }) => upload));
+      warnings.push(
+        "Images could not be saved. You can add them from your profile.",
+      );
+      return { ...user, warnings };
+    }
   },
 
   async login(email: string, password: string) {

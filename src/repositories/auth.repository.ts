@@ -42,6 +42,13 @@ export const authRepository = {
       select: { ...userProfileSelect, updatedAt: false },
     });
   },
+  saveImages(id: number, data: { logo?: string; signature?: string }) {
+    return prisma.user.update({
+      where: { id },
+      data,
+      select: { ...userProfileSelect, updatedAt: false },
+    });
+  },
   findAuthenticatedUser(id: number) {
     return prisma.user.findUnique({
       where: { id },

@@ -5,7 +5,10 @@ import {
   updateProfile,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
-import { upload } from "../middleware/multer.middleware.js";
+import {
+  upload,
+  verifyImageUploads,
+} from "../middleware/multer.middleware.js";
 import { validate } from "../middleware/validator.middleware.js";
 import { profileUpdateValidator } from "../validators/index.js";
 
@@ -20,6 +23,7 @@ router
       { name: "logo", maxCount: 1 },
       { name: "signature", maxCount: 1 },
     ]),
+    verifyImageUploads,
     profileUpdateValidator(),
     validate,
     updateProfile,

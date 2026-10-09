@@ -25,7 +25,10 @@ const registerUser = asyncHandler<ParamsDictionary, RegisterUserBody>(
       req.body,
       req.files as UploadedFields | undefined,
     );
-    return res.status(201).json(new ApiResponse(201, user, "User registered"));
+    const message = user.warnings.length
+      ? "User registered, but some images could not be saved"
+      : "User registered";
+    return res.status(201).json(new ApiResponse(201, user, message));
   },
 );
 

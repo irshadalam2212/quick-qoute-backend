@@ -12,8 +12,14 @@ import {
   userLoginValidator,
 } from "../validators/index.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
-import { upload } from "../middleware/multer.middleware.js";
-import { loginRateLimit } from "../middleware/login-rate-limit.middleware.js";
+import {
+  registerUpload,
+  requireMultipart,
+} from "../middleware/multer.middleware.js";
+import {
+  loginRateLimit,
+  registerRateLimit,
+} from "../middleware/login-rate-limit.middleware.js";
 
 const router = Router();
 
@@ -21,7 +27,11 @@ const router = Router();
 router
   .route("/register")
   .post(
-    upload.fields([
+    // Throttle before multer so rejected requests never buffer uploads.
+    registerRateLimit,
+    requireMultipart,
+    // Images are checked in the service so a bad file never blocks sign-up.
+    registerUpload.fields([
       {
         name: "logo",
         maxCount: 1,
