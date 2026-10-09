@@ -37,12 +37,27 @@ export const invoiceRepository = {
     return prisma.invoice.create({ data, include: invoiceInclude });
   },
 
-  findAll(userId: number) {
-    return prisma.invoice.findMany({
-      where: { createdById: userId },
-      // include: invoiceInclude,
-      orderBy: { createdAt: "desc" },
-    });
+  async findAll(userId: number) {
+    const [invoices, paymentTotals] = await Promise.all([
+      prisma.invoice.findMany({
+        where: { createdById: userId },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.payment.groupBy({
+        by: ["invoiceId"],
+        where: { createdById: userId },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const receivedByInvoice = new Map(
+      paymentTotals.map(({ invoiceId, _sum }) => [invoiceId, _sum.amount ?? 0]),
+    );
+
+    return invoices.map((invoice) => ({
+      ...invoice,
+      receivedAmount: receivedByInvoice.get(invoice.id) ?? 0,
+    }));
   },
 
   findById(id: number, userId: number) {
