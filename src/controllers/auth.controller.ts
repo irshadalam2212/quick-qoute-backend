@@ -6,10 +6,9 @@ import type {
   LoginBody,
   RefreshTokenBody,
   RegisterUserBody,
-  UpdateProfileBody,
 } from "../types/api.js";
-import { ApiResponse } from "../utils/apiresponse.js";
 import { ApiError } from "../utils/apierror.js";
+import { ApiResponse } from "../utils/apiresponse.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 import { getAuthUser } from "../utils/auth.js";
 import { authService } from "../services/auth.service.js";
@@ -57,16 +56,6 @@ const logout = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged out"));
 });
 
-const getCurrentUser = asyncHandler(async (req, res) => {
-  const user = await authService.currentUser(getAuthUser(req).id);
-  return res.status(200).json(new ApiResponse(200, user, "Profile fetched."));
-});
-
-const getUsers = asyncHandler(async (req, res) => {
-  const users = await authService.listUsers(getAuthUser(req).role);
-  return res.status(200).json(new ApiResponse(200, users, "Users fetched"));
-});
-
 const refreshAccessToken = asyncHandler<ParamsDictionary, RefreshTokenBody>(
   async (req, res) => {
     const token: string | undefined =
@@ -81,24 +70,10 @@ const refreshAccessToken = asyncHandler<ParamsDictionary, RefreshTokenBody>(
   },
 );
 
-const updateProfile = asyncHandler<ParamsDictionary, UpdateProfileBody>(
-  async (req, res) => {
-    await authService.updateProfile(
-      getAuthUser(req).id,
-      req.body,
-      req.files as UploadedFields | undefined,
-    );
-    return res.status(200).json(new ApiResponse(200, [], "Profile updated"));
-  },
-);
-
 export {
   registerUser,
   login,
   guestLogin,
   logout,
-  getCurrentUser,
-  getUsers,
   refreshAccessToken,
-  updateProfile,
 };

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcrypt";
-import type { RegisterUserBody, UpdateProfileBody } from "../types/api.js";
+import type { RegisterUserBody } from "../types/api.js";
 import type { UploadedFields } from "../middleware/multer.middleware.js";
 import { ApiError } from "../utils/apierror.js";
 import {
@@ -94,18 +94,6 @@ export const authService = {
     return authRepository.saveRefreshToken(userId, null);
   },
 
-  async currentUser(userId: number) {
-    const user = await authRepository.findProfile(userId);
-    if (!user) throw new ApiError(404, "User not found.");
-    return user;
-  },
-
-  async listUsers(role: string) {
-    if (role !== "ADMIN")
-      throw new ApiError(403, "You are not allowed to view users.");
-    return authRepository.findUsers();
-  },
-
   async refreshSession(token: string) {
     try {
       const decoded = verifyRefreshToken(token);
@@ -116,59 +104,6 @@ export const authService = {
     } catch {
       throw new ApiError(401, "Invalid refresh token");
     }
-  },
-
-  async updateProfile(
-    userId: number,
-    body: UpdateProfileBody,
-    files?: UploadedFields,
-  ) {
-    const logoFile = files?.logo?.[0];
-    const signatureFile = files?.signature?.[0];
-    const [logo, signature] = await Promise.all([
-      logoFile
-        ? uploadToCloudinary(logoFile.buffer, "quickquote/users/logos")
-        : undefined,
-      signatureFile
-        ? uploadToCloudinary(
-            signatureFile.buffer,
-            "quickquote/users/signatures",
-          )
-        : undefined,
-    ]);
-    const user = await authRepository.findById(userId);
-    if (!user) throw new ApiError(404, "User not found.");
-    const optionalText = (value: string | null | undefined) =>
-      value == null ? value : value.trim() || null;
-    return authRepository.updateProfile(userId, {
-      ...(body.name !== undefined && { name: body.name.trim() }),
-      ...(body.companyName !== undefined && {
-        companyName: optionalText(body.companyName),
-      }),
-      ...(body.mobileNumber !== undefined && {
-        mobileNumber: optionalText(body.mobileNumber),
-      }),
-      ...(body.alternateMobile !== undefined && {
-        alternateMobile: optionalText(body.alternateMobile),
-      }),
-      ...(body.website !== undefined && {
-        website: optionalText(body.website),
-      }),
-      ...(body.gstNumber !== undefined && {
-        gstNumber: optionalText(body.gstNumber),
-      }),
-      ...(body.panNumber !== undefined && {
-        panNumber: optionalText(body.panNumber),
-      }),
-      ...(body.services !== undefined && {
-        services: optionalText(body.services),
-      }),
-      ...(body.address !== undefined && {
-        address: optionalText(body.address),
-      }),
-      ...(logo && { logo: logo.secure_url }),
-      ...(signature && { signature: signature.secure_url }),
-    });
   },
 
   async generateTokens(

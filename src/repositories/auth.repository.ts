@@ -63,30 +63,4 @@ export const authRepository = {
       select: userProfileSelect,
     });
   },
-  findProfile(id: number) {
-    return prisma.user.findUnique({ where: { id }, select: userProfileSelect });
-  },
-  findUsers() {
-    return prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        companyName: true,
-        mobileNumber: true,
-        alternateMobile: true,
-        logo: true,
-        role: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-  },
-  updateProfile(id: number, data: Prisma.UserUpdateInput) {
-    return prisma.user.update({
-      where: { id },
-      data,
-      select: userProfileSelect,
-    });
-  },
 };
