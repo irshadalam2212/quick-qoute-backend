@@ -15,7 +15,7 @@ const createCategory = asyncHandler<ParamsDictionary, CreateCategoryBody>(
     );
     return res
       .status(201)
-      .json(new ApiResponse(201, category, "Category created successfully."));
+      .json(new ApiResponse(201, category, "Category created"));
   },
 );
 
@@ -23,14 +23,14 @@ const getAllCategories = asyncHandler(async (_req, res) => {
   const categories = await categoryService.list();
   return res
     .status(200)
-    .json(new ApiResponse(200, categories, "Categories fetched successfully."));
+    .json(new ApiResponse(200, categories, "Categories fetched"));
 });
 
 const getCategoryById = asyncHandler<CategoryParams>(async (req, res) => {
   const category = await categoryService.get(Number(req.params.categoryId));
   return res
     .status(200)
-    .json(new ApiResponse(200, category, "Category fetched successfully."));
+    .json(new ApiResponse(200, category, "Category fetched"));
 });
 
 const updateCategory = asyncHandler<CategoryParams, UpdateCategoryBody>(
@@ -41,15 +41,13 @@ const updateCategory = asyncHandler<CategoryParams, UpdateCategoryBody>(
     );
     return res
       .status(200)
-      .json(new ApiResponse(200, category, "Category updated successfully."));
+      .json(new ApiResponse(200, category, "Category updated"));
   },
 );
 
 const deleteCategory = asyncHandler<CategoryParams>(async (req, res) => {
   await categoryService.delete(Number(req.params.categoryId));
-  return res
-    .status(200)
-    .json(new ApiResponse(200, null, "Category deleted successfully."));
+  return res.status(200).json(new ApiResponse(200, null, "Category deleted"));
 });
 
 export {

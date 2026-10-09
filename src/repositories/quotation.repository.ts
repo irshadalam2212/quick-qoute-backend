@@ -43,7 +43,7 @@ export const quotationRepository = {
   findAll(userId: number) {
     return prisma.quotation.findMany({
       where: { createdById: userId },
-      include: quotationInclude,
+      // include: quotationInclude,
       orderBy: { createdAt: "desc" },
     });
   },

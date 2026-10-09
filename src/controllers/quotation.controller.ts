@@ -15,7 +15,7 @@ const createQuotation = asyncHandler<ParamsDictionary, QuotationBody>(
     );
     return res
       .status(201)
-      .json(new ApiResponse(201, quotation, "Quotation created successfully"));
+      .json(new ApiResponse(201, quotation, "Quotation created"));
   },
 );
 
@@ -23,7 +23,7 @@ const getAllQuotation = asyncHandler(async (req, res) => {
   const quotations = await quotationService.list(getAuthUser(req).id);
   return res
     .status(200)
-    .json(new ApiResponse(200, quotations, "Quotation fetched successfully"));
+    .json(new ApiResponse(200, quotations, "Quotation fetched"));
 });
 
 const getQuotationById = asyncHandler<QuotationParams>(async (req, res) => {
@@ -33,7 +33,7 @@ const getQuotationById = asyncHandler<QuotationParams>(async (req, res) => {
   );
   return res
     .status(200)
-    .json(new ApiResponse(200, quotation, "Quotation fetched successfully"));
+    .json(new ApiResponse(200, quotation, "Quotation fetched"));
 });
 
 const updateQuotation = asyncHandler<QuotationParams, QuotationBody>(
@@ -45,7 +45,7 @@ const updateQuotation = asyncHandler<QuotationParams, QuotationBody>(
     );
     return res
       .status(200)
-      .json(new ApiResponse(200, quotation, "Quotation updated successfully"));
+      .json(new ApiResponse(200, quotation, "Quotation updated"));
   },
 );
 
@@ -54,9 +54,7 @@ const deleteQuotation = asyncHandler<QuotationParams>(async (req, res) => {
     Number(req.params.quotationId),
     getAuthUser(req).id,
   );
-  return res
-    .status(200)
-    .json(new ApiResponse(200, {}, "Quotation deleted successfully"));
+  return res.status(200).json(new ApiResponse(200, {}, "Quotation deleted"));
 });
 
 export {

@@ -158,7 +158,7 @@ async function main(): Promise<void> {
     });
   }
 
-  console.log(`✅ ${categories.length} categories seeded successfully.`);
+  console.log(`✅ ${categories.length} categories seeded.`);
 }
 
 main()

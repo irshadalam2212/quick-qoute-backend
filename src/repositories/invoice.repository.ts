@@ -36,13 +36,15 @@ export const invoiceRepository = {
   create(data: Prisma.InvoiceCreateInput) {
     return prisma.invoice.create({ data, include: invoiceInclude });
   },
+
   findAll(userId: number) {
     return prisma.invoice.findMany({
       where: { createdById: userId },
-      include: invoiceInclude,
+      // include: invoiceInclude,
       orderBy: { createdAt: "desc" },
     });
   },
+
   findById(id: number, userId: number) {
     return prisma.invoice.findUnique({
       where: { id, createdById: userId },

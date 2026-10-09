@@ -4,9 +4,7 @@ import { unitService } from "../services/unit.service.js";
 
 const getAllUnits = asyncHandler(async (_req, res) => {
   const units = await unitService.list();
-  return res
-    .status(200)
-    .json(new ApiResponse(200, units, "Units retrieved successfully"));
+  return res.status(200).json(new ApiResponse(200, units, "Units retrieved"));
 });
 
 export { getAllUnits };

@@ -38,9 +38,11 @@ export const invoiceService = {
     };
     return invoiceRepository.create(data);
   },
+
   list(userId: number) {
     return invoiceRepository.findAll(userId);
   },
+  
   async get(id: number, userId: number) {
     const invoice = await invoiceRepository.findById(id, userId);
     if (!invoice) throw new ApiError(404, "Invoice not found");

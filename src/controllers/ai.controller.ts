@@ -27,11 +27,5 @@ export const generateDescription = asyncHandler<
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { description },
-        "Description generated successfully.",
-      ),
-    );
+    .json(new ApiResponse(200, { description }, "Description generated"));
 });

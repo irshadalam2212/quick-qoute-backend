@@ -26,9 +26,7 @@ const registerUser = asyncHandler<ParamsDictionary, RegisterUserBody>(
       req.body,
       req.files as UploadedFields | undefined,
     );
-    return res
-      .status(201)
-      .json(new ApiResponse(201, user, "User registered successfully"));
+    return res.status(201).json(new ApiResponse(201, user, "User registered"));
   },
 );
 
@@ -38,7 +36,7 @@ const login = asyncHandler<ParamsDictionary, LoginBody>(async (req, res) => {
     .status(200)
     .cookie("accessToken", session.accessToken, cookieOptions)
     .cookie("refreshToken", session.refreshToken, cookieOptions)
-    .json(new ApiResponse(200, session, "User logged in successfully"));
+    .json(new ApiResponse(200, session, "User logged in"));
 });
 
 const guestLogin = asyncHandler(async (_req, res) => {
@@ -47,7 +45,7 @@ const guestLogin = asyncHandler(async (_req, res) => {
     .status(200)
     .cookie("accessToken", session.accessToken, cookieOptions)
     .cookie("refreshToken", session.refreshToken, cookieOptions)
-    .json(new ApiResponse(200, session, "Guest session started successfully."));
+    .json(new ApiResponse(200, session, "Guest session started"));
 });
 
 const logout = asyncHandler(async (req, res) => {
@@ -61,16 +59,12 @@ const logout = asyncHandler(async (req, res) => {
 
 const getCurrentUser = asyncHandler(async (req, res) => {
   const user = await authService.currentUser(getAuthUser(req).id);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, user, "Current user fetched successfully."));
+  return res.status(200).json(new ApiResponse(200, user, "Profile fetched."));
 });
 
 const getUsers = asyncHandler(async (req, res) => {
   const users = await authService.listUsers(getAuthUser(req).role);
-  return res
-    .status(200)
-    .json(new ApiResponse(200, users, "Users fetched successfully."));
+  return res.status(200).json(new ApiResponse(200, users, "Users fetched"));
 });
 
 const refreshAccessToken = asyncHandler<ParamsDictionary, RefreshTokenBody>(
@@ -94,9 +88,7 @@ const updateProfile = asyncHandler<ParamsDictionary, UpdateProfileBody>(
       req.body,
       req.files as UploadedFields | undefined,
     );
-    return res
-      .status(200)
-      .json(new ApiResponse(200, [], "Profile updated successfully."));
+    return res.status(200).json(new ApiResponse(200, [], "Profile updated"));
   },
 );
 
