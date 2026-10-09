@@ -4,6 +4,6 @@ import { verifyJWT } from "../middleware/auth.middleware.js";
 
 const router = Router();
 
-router.post("/generate-description", verifyJWT, generateDescription);
+router.post("/generate", verifyJWT, generateDescription);
 
 export default router;

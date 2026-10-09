@@ -53,10 +53,10 @@ app.use("/api/v1/items", itemRouter);
 app.use("/api/v1/quotations", quotationRouter);
 app.use("/api/v1/invoices", invoiceRouter);
 app.use("/api/v1/payments", paymentRouter);
-app.use("/api/v1/dashboard", dashboardRouter);
+app.use("/api/v1", dashboardRouter);
 
 // AI routes
-app.use("/api/v1/ai", aiRouter);
+app.use("/api/v1", aiRouter);
 
 // Error handling must be registered after all routes
 app.use(notFoundHandler);
